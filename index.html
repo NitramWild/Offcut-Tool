@@ -515,6 +515,10 @@
 
     <div class="card">
       <div class="card-title">New offcut details</div>
+      <div id="next-code-banner" style="display:flex;align-items:center;gap:10px;background:var(--teal-bg);border:1px solid #9dd4be;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--teal-text);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+        <span>This offcut will be automatically assigned code: <strong id="next-code-preview">...</strong></span>
+      </div>
       <div class="form-grid" style="margin-bottom:12px;">
         <div class="form-group">
           <label>Operator (your name)</label>
@@ -921,6 +925,7 @@ function showTab(name) {
     document.querySelectorAll('.tab')[i].classList.toggle('active', t===name);
   });
   if (name === 'inventory') renderInventory();
+  if (name === 'add') refreshNextCode();
   if (name === 'settings') {
     document.getElementById('cfg-apikey').value = CFG.apiKey;
     document.getElementById('cfg-sheetid').value = CFG.sheetId;
@@ -1055,24 +1060,26 @@ async function doUseOffcut() {
   const code = _pendingUseCode;
   if (!code) return;
 
-  const item = inventory.find(i => i.code === code);
-  if (!item) return;
+  const itemIndex = inventory.findIndex(i => i.code === code);
+  if (itemIndex === -1) return;
+  const item = inventory[itemIndex];
 
   const confirmBtn = document.getElementById('confirm-use-btn');
   if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<span class="spinner"></span> Processing...'; }
 
-  // Mark in local inventory
-  item.status = 'Used';
+  // Move to Google Sheets USED tab and delete from INVENTORY
+  const synced = await moveToUsedSheet(code);
 
-  // Update the sheet
-  const synced = await markUsedInSheet(code);
+  // Remove from local inventory array entirely
+  inventory.splice(itemIndex, 1);
 
-  // Update the card in the results list
+  // Remove the card from the DOM completely
   const card = document.querySelector(`[id="use-btn-${code}"]`)?.closest('.result-card');
   if (card) {
-    card.classList.add('used-card');
-    const useBtn = document.getElementById(`use-btn-${code}`);
-    if (useBtn) useBtn.replaceWith(Object.assign(document.createElement('span'), { className: 'used-stamp', textContent: '✓ Used' }));
+    card.style.transition = 'opacity 0.3s, transform 0.3s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(20px)';
+    setTimeout(() => card.remove(), 300);
   }
 
   closeUseOverlay();
@@ -1080,55 +1087,68 @@ async function doUseOffcut() {
   // Show a confirmation message in the search results area
   const resultsEl = document.getElementById('search-results');
   const msgDiv = document.createElement('div');
-  msgDiv.className = 'msg msg-success';
   msgDiv.style.marginBottom = '12px';
   if (synced) {
-    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> marked as used and removed from Google Sheets.</span>`;
+    msgDiv.className = 'msg msg-success';
+    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> removed from inventory and moved to the USED tab in Google Sheets.</span>`;
   } else {
-    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> marked as used locally. Google Sheets sync not connected — update manually if needed.</span>`;
     msgDiv.className = 'msg msg-warning';
+    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> removed from the tool's inventory. Google Sheets sync not connected — update manually if needed.</span>`;
   }
   resultsEl.insertBefore(msgDiv, resultsEl.firstChild);
-  setTimeout(() => msgDiv.remove(), 6000);
+  setTimeout(() => msgDiv.remove(), 7000);
 }
 
-async function markUsedInSheet(code) {
+async function moveToUsedSheet(code) {
   if (!CFG.apiKey) return false;
   setSyncBadge('syncing', 'Updating sheet...');
   try {
-    // Step 1: Read the INVENTORY sheet to find the row with this code
-    // Column I (index 8) holds the code
+    // Step 1: Read INVENTORY to find the row
     const readUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A:O?key=${CFG.apiKey}`;
     const readResp = await fetch(readUrl);
-    if (!readResp.ok) { setSyncBadge('error', 'Sync failed'); return false; }
+    if (!readResp.ok) { setSyncBadge('error', 'Read failed'); return false; }
     const readData = await readResp.json();
     const rows = readData.values || [];
 
-    // Find the row index (1-based for Sheets API, rows[0] = row 1)
     let rowIndex = -1;
+    let rowData = null;
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i][8] === code) { // Column I = index 8
-        rowIndex = i + 1; // Sheets rows are 1-based
+      if (rows[i][8] === code) { // Column I (index 8) = code
+        rowIndex = i + 1; // 1-based for Sheets
+        rowData = rows[i];
         break;
       }
     }
 
-    if (rowIndex === -1) {
+    if (rowIndex === -1 || !rowData) {
       setSyncBadge('error', 'Row not found');
       return false;
     }
 
-    // Step 2: Update column N (index 13 = "Status") in that row to "Used"
-    const updateUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!N${rowIndex}?valueInputOption=USER_ENTERED&key=${CFG.apiKey}`;
-    const updateResp = await fetch(updateUrl, {
-      method: 'PUT',
+    // Step 2: Append the row to the USED sheet (with today's date used added in column P)
+    const usedDate = getToday();
+    const usedRow = [...rowData];
+    usedRow[13] = 'Used'; // Update status column
+    usedRow[15] = usedDate; // Add used date in column P
+    const appendUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/USED!A:P:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
+    const appendResp = await fetch(appendUrl, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [['Used']] })
+      body: JSON.stringify({ values: [usedRow] })
+    });
+    if (!appendResp.ok) { setSyncBadge('error', 'Write to USED failed'); return false; }
+
+    // Step 3: Clear (blank out) the row in INVENTORY so it's removed
+    // We blank it rather than delete to avoid row-shift issues with API key auth
+    const clearUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A${rowIndex}:O${rowIndex}:clear?key=${CFG.apiKey}`;
+    const clearResp = await fetch(clearUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    setSyncBadge(updateResp.ok ? 'synced' : 'error', updateResp.ok ? 'Sheet updated' : 'Sync failed');
+    setSyncBadge(clearResp.ok ? 'synced' : 'error', clearResp.ok ? 'Moved to USED' : 'Clear failed');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
-    return updateResp.ok;
+    return clearResp.ok;
   } catch(e) {
     setSyncBadge('error', 'Offline');
     return false;
@@ -1168,9 +1188,17 @@ async function doAdd() {
   const synced = await syncAddToSheet(item, area);
 
   if (synced) {
-    showMsg('add-msg','success',`<strong>${code}</strong> added to stock (${x} × ${y} cm · ${mfr} ${type} · ${cond}) and synced to Google Sheets.`);
+    showMsg('add-msg','success',`
+      <div style="font-size:15px;margin-bottom:4px;">✅ Offcut added to stock!</div>
+      <div>Assigned code: <strong style="font-size:17px;letter-spacing:-0.01em;">${code}</strong></div>
+      <div style="margin-top:4px;font-size:12px;opacity:0.85;">${x} × ${y} cm · ${mfr} ${type} · ${cond} · synced to Google Sheets</div>
+    `);
   } else {
-    showMsg('add-msg','warning',`<strong>${code}</strong> added to local stock. Google Sheets sync is not configured — data saved here only. Go to Settings to connect.`);
+    showMsg('add-msg','warning',`
+      <div style="font-size:15px;margin-bottom:4px;">⚠️ Offcut added locally</div>
+      <div>Assigned code: <strong style="font-size:17px;">${code}</strong></div>
+      <div style="margin-top:4px;font-size:12px;opacity:0.85;">Google Sheets sync not configured — data saved here only. Go to Settings to connect.</div>
+    `);
   }
 
   ['a-x','a-y','a-rack','a-slot','a-comments'].forEach(id => document.getElementById(id).value = '');
@@ -1179,6 +1207,7 @@ async function doAdd() {
   updateTypes('a-mfr','a-type','a-thick');
   document.getElementById('a-cond').value = 'OK';
   btn.disabled = false;
+  refreshNextCode();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1296,11 +1325,17 @@ async function testConnection() {
 /* ═══════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════ */
+function refreshNextCode() {
+  const el = document.getElementById('next-code-preview');
+  if (el) el.textContent = nextCode();
+}
+
 function init() {
   populateAllMfrs();
   updateConfigBanner();
   document.getElementById('cfg-apikey').value = CFG.apiKey;
   setSyncBadge('synced', 'Connected');
+  refreshNextCode();
 }
 init();
 </script>
