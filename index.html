@@ -326,6 +326,74 @@
     .container { padding: 16px 12px 60px; }
   }
 
+  /* ── Use offcut button ── */
+  .btn-use {
+    background: #1a6b2f;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-use:hover { background: #145422; }
+  .btn-use:active { transform: scale(0.97); }
+  .btn-use:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-use svg { width: 14px; height: 14px; }
+
+  /* ── Confirm overlay ── */
+  .overlay-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .overlay-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .overlay-box h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .overlay-box p  { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 16px; }
+  .overlay-detail {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .overlay-detail strong { color: var(--text); }
+  .overlay-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── Used card state ── */
+  .result-card.used-card {
+    opacity: 0.5;
+    pointer-events: none;
+    border-color: var(--border);
+  }
+  .used-stamp {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--red-text);
+    background: var(--red-bg);
+    padding: 4px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
   /* ── Print ── */
   @media print {
     header { position: static; }
@@ -919,15 +987,152 @@ function doSearch() {
           <span>Logged by ${item.by}</span>
         </div>
       </div>
-      <div class="waste-col">
-        <div class="waste-pct" style="color:${wasteColor(item.waste)};">${item.waste.toFixed(1)}% waste</div>
-        <div class="waste-bar-bg"><div class="waste-bar-fill" style="width:${Math.min(item.waste,100).toFixed(1)}%;background:${wasteFill(item.waste)};"></div></div>
+      <div class="waste-col" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div>
+          <div class="waste-pct" style="color:${wasteColor(item.waste)};">${item.waste.toFixed(1)}% waste</div>
+          <div class="waste-bar-bg"><div class="waste-bar-fill" style="width:${Math.min(item.waste,100).toFixed(1)}%;background:${wasteFill(item.waste)};"></div></div>
+        </div>
+        <button class="btn-use" id="use-btn-${item.code}" onclick="confirmUse('${item.code}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Use this
+        </button>
       </div>
     </div>`;
   });
 
   el.innerHTML = html;
   syncSearchToSheet(mfr, type, thick, x, y);
+}
+
+/* ═══════════════════════════════════════════════════
+   USE / CONSUME AN OFFCUT
+═══════════════════════════════════════════════════ */
+let _pendingUseCode = null;
+
+function confirmUse(code) {
+  const item = inventory.find(i => i.code === code);
+  if (!item) return;
+  _pendingUseCode = code;
+
+  const operator = document.getElementById('s-operator').value || '(not selected)';
+  const loc = item.rack ? `Rack ${item.rack}${item.slot ? ', Slot ' + item.slot : ''}` : 'Location not recorded';
+
+  // Build the confirmation popup
+  const backdrop = document.createElement('div');
+  backdrop.className = 'overlay-backdrop';
+  backdrop.id = 'use-overlay';
+  backdrop.innerHTML = `
+    <div class="overlay-box">
+      <h3>✅ Mark offcut as used?</h3>
+      <p>This will remove <strong>${code}</strong> from the available stock and delete it from the Google Sheet database. This cannot be undone.</p>
+      <div class="overlay-detail">
+        <strong>Code:</strong> ${item.code}<br>
+        <strong>Size:</strong> ${item.x} × ${item.y} cm<br>
+        <strong>Plate:</strong> ${item.mfr} ${item.type} ${item.thick} mm<br>
+        <strong>Condition:</strong> ${item.cond}<br>
+        <strong>Location:</strong> ${loc}<br>
+        <strong>Used by:</strong> ${operator}
+      </div>
+      <div class="overlay-actions">
+        <button class="btn btn-outline" onclick="closeUseOverlay()">Cancel</button>
+        <button class="btn btn-primary" style="background:#1a6b2f;" id="confirm-use-btn" onclick="doUseOffcut()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+          Yes, mark as used
+        </button>
+      </div>
+      <div id="overlay-msg" style="margin-top:10px;"></div>
+    </div>`;
+  document.body.appendChild(backdrop);
+}
+
+function closeUseOverlay() {
+  const el = document.getElementById('use-overlay');
+  if (el) el.remove();
+  _pendingUseCode = null;
+}
+
+async function doUseOffcut() {
+  const code = _pendingUseCode;
+  if (!code) return;
+
+  const item = inventory.find(i => i.code === code);
+  if (!item) return;
+
+  const confirmBtn = document.getElementById('confirm-use-btn');
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<span class="spinner"></span> Processing...'; }
+
+  // Mark in local inventory
+  item.status = 'Used';
+
+  // Update the sheet
+  const synced = await markUsedInSheet(code);
+
+  // Update the card in the results list
+  const card = document.querySelector(`[id="use-btn-${code}"]`)?.closest('.result-card');
+  if (card) {
+    card.classList.add('used-card');
+    const useBtn = document.getElementById(`use-btn-${code}`);
+    if (useBtn) useBtn.replaceWith(Object.assign(document.createElement('span'), { className: 'used-stamp', textContent: '✓ Used' }));
+  }
+
+  closeUseOverlay();
+
+  // Show a confirmation message in the search results area
+  const resultsEl = document.getElementById('search-results');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'msg msg-success';
+  msgDiv.style.marginBottom = '12px';
+  if (synced) {
+    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> marked as used and removed from Google Sheets.</span>`;
+  } else {
+    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> marked as used locally. Google Sheets sync not connected — update manually if needed.</span>`;
+    msgDiv.className = 'msg msg-warning';
+  }
+  resultsEl.insertBefore(msgDiv, resultsEl.firstChild);
+  setTimeout(() => msgDiv.remove(), 6000);
+}
+
+async function markUsedInSheet(code) {
+  if (!CFG.apiKey) return false;
+  setSyncBadge('syncing', 'Updating sheet...');
+  try {
+    // Step 1: Read the INVENTORY sheet to find the row with this code
+    // Column I (index 8) holds the code
+    const readUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A:O?key=${CFG.apiKey}`;
+    const readResp = await fetch(readUrl);
+    if (!readResp.ok) { setSyncBadge('error', 'Sync failed'); return false; }
+    const readData = await readResp.json();
+    const rows = readData.values || [];
+
+    // Find the row index (1-based for Sheets API, rows[0] = row 1)
+    let rowIndex = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][8] === code) { // Column I = index 8
+        rowIndex = i + 1; // Sheets rows are 1-based
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      setSyncBadge('error', 'Row not found');
+      return false;
+    }
+
+    // Step 2: Update column N (index 13 = "Status") in that row to "Used"
+    const updateUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!N${rowIndex}?valueInputOption=USER_ENTERED&key=${CFG.apiKey}`;
+    const updateResp = await fetch(updateUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [['Used']] })
+    });
+
+    setSyncBadge(updateResp.ok ? 'synced' : 'error', updateResp.ok ? 'Sheet updated' : 'Sync failed');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+    return updateResp.ok;
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+    return false;
+  }
 }
 
 /* ═══════════════════════════════════════════════════
