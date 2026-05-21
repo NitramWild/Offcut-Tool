@@ -1146,7 +1146,7 @@ async function moveToUsedSheet(code) {
     const usedRow = [...rowData];
     usedRow[13] = 'Used'; // Update status column
     usedRow[15] = usedDate; // Add used date in column P
-    const appendUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/USED!A:P:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
+    const appendUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/USED!A:P/append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
     const appendResp = await fetch(appendUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1156,7 +1156,7 @@ async function moveToUsedSheet(code) {
 
     // Step 3: Clear (blank out) the row in INVENTORY so it's removed
     // We blank it rather than delete to avoid row-shift issues with API key auth
-    const clearUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A${rowIndex}:O${rowIndex}:clear?key=${CFG.apiKey}`;
+    const clearUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A${rowIndex}:O${rowIndex}/clear?key=${CFG.apiKey}`;
     const clearResp = await fetch(clearUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
@@ -1296,17 +1296,25 @@ async function syncAddToSheet(item, area) {
   setSyncBadge('syncing', 'Syncing...');
   try {
     const row = [item.date, item.by, item.mfr, item.type, parseFloat(item.thick), item.x, item.y, area, item.code, item.cond, item.rack, item.slot, '', 'Available', item.comments];
-    const url = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A:O:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
+    const url = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A:O/append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ values: [row] })
     });
-    setSyncBadge(resp.ok ? 'synced' : 'error', resp.ok ? 'Sheet updated' : 'Sync failed');
+    if (!resp.ok) {
+      const errData = await resp.json().catch(()=>({}));
+      const errMsg = errData?.error?.message || 'Sync failed';
+      setSyncBadge('error', 'Write failed');
+      console.error('Sheets write error:', errMsg);
+      return false;
+    }
+    setSyncBadge('synced', 'Sheet updated');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
-    return resp.ok;
+    return true;
   } catch(e) {
     setSyncBadge('error', 'Offline');
+    console.error('Sheets sync error:', e);
     return false;
   }
 }
