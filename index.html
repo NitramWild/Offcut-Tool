@@ -680,6 +680,7 @@
    CONFIG
 ═══════════════════════════════════════════════════ */
 const DEFAULT_SHEET_ID = '1sXgnB7rEUzl3F36714c6sEJm7h46OS_V3yGOrSYzkFI';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx-IokiYshR7Kh3Gmfkq8oCFTsmuskbarskVizNV6U66cZSaF06-DYxhPt5RviZzFW7/exec';
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 const BAKED_API_KEY = 'AIzaSyDn0dGrUPAtwLKxWpvPvjGo4yWqFT1yJIs';
@@ -965,9 +966,22 @@ function doSearch() {
   if (!x || !y || x <= 0 || y <= 0) { showMsg('search-results','error','Please enter valid X and Y sizes greater than zero.'); return; }
 
   const needed = x * y;
+
+  // Check both orientations — plate can be rotated to fit either way
+  const fitsNormal  = i => i.x >= x && i.y >= y;
+  const fitsRotated = i => i.x >= y && i.y >= x;
+
   const matches = inventory
-    .filter(i => i.mfr === mfr && i.type === type && i.thick === thick && i.status === 'Available' && i.x >= x && i.y >= y)
-    .map(i => ({ ...i, area: i.x * i.y, waste: ((i.x * i.y - needed) / (i.x * i.y)) * 100 }))
+    .filter(i => i.mfr === mfr && i.type === type && i.thick === thick && i.status === 'Available'
+              && (fitsNormal(i) || fitsRotated(i)))
+    .map(i => {
+      const area = i.x * i.y;
+      // If it fits both ways, pick the orientation with less waste (should be same area, but flag which way)
+      const wasteN = fitsNormal(i)  ? ((area - needed) / area) * 100 : Infinity;
+      const wasteR = fitsRotated(i) ? ((area - needed) / area) * 100 : Infinity;
+      const rotated = wasteR < wasteN && !fitsNormal(i);
+      return { ...i, area, waste: Math.min(wasteN, wasteR), rotated };
+    })
     .sort((a,b) => a.waste - b.waste);
 
   if (!matches.length) {
@@ -1000,6 +1014,7 @@ function doSearch() {
         </div>
         <div class="result-meta">
           <span>${item.x} × ${item.y} cm</span>
+          ${item.rotated ? '<span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:10px;">↩ rotate to fit</span>' : ''}
           <span class="meta-dot">·</span>
           <span>${item.mfr} ${item.type} ${item.thick} mm</span>
           <span class="meta-dot">·</span>
@@ -1116,57 +1131,20 @@ async function doUseOffcut() {
 }
 
 async function moveToUsedSheet(code) {
-  if (!CFG.apiKey) return false;
   setSyncBadge('syncing', 'Updating sheet...');
   try {
-    // Step 1: Read INVENTORY to find the row
-    const readUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A:O?key=${CFG.apiKey}`;
-    const readResp = await fetch(readUrl);
-    if (!readResp.ok) { setSyncBadge('error', 'Read failed'); return false; }
-    const readData = await readResp.json();
-    const rows = readData.values || [];
-
-    let rowIndex = -1;
-    let rowData = null;
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i][8] === code) { // Column I (index 8) = code
-        rowIndex = i + 1; // 1-based for Sheets
-        rowData = rows[i];
-        break;
-      }
-    }
-
-    if (rowIndex === -1 || !rowData) {
-      setSyncBadge('error', 'Row not found');
-      return false;
-    }
-
-    // Step 2: Append the row to the USED sheet (with today's date used added in column P)
-    const usedDate = getToday();
-    const usedRow = [...rowData];
-    usedRow[13] = 'Used'; // Update status column
-    usedRow[15] = usedDate; // Add used date in column P
-    const appendUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/USED!A:P/append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
-    const appendResp = await fetch(appendUrl, {
+    const resp = await fetch(WEBAPP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [usedRow] })
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'use', code, usedDate: getToday() })
     });
-    if (!appendResp.ok) { setSyncBadge('error', 'Write to USED failed'); return false; }
-
-    // Step 3: Clear (blank out) the row in INVENTORY so it's removed
-    // We blank it rather than delete to avoid row-shift issues with API key auth
-    const clearUrl = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A${rowIndex}:O${rowIndex}/clear?key=${CFG.apiKey}`;
-    const clearResp = await fetch(clearUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    setSyncBadge(clearResp.ok ? 'synced' : 'error', clearResp.ok ? 'Moved to USED' : 'Clear failed');
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Moved to USED' : (data.error || 'Sync failed'));
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
-    return clearResp.ok;
+    return data.ok;
   } catch(e) {
     setSyncBadge('error', 'Offline');
+    console.error('Sheets sync error:', e);
     return false;
   }
 }
@@ -1193,10 +1171,14 @@ async function doAdd() {
   const btn = document.getElementById('add-btn');
   btn.disabled = true;
 
+  // Always store larger dimension as X for consistency
+  const normX = Math.max(x, y);
+  const normY = Math.min(x, y);
+
   const code  = nextCode(mfr);
   const today = getToday();
   const area  = x * y;
-  const item  = { code, date:today, by:operator, mfr, type, thick, x, y, cond, rack, slot, status:'Available', comments };
+  const item  = { code, date:today, by:operator, mfr, type, thick, x:normX, y:normY, cond, rack, slot, status:'Available', comments };
   inventory.push(item);
 
   showMsg('add-msg','info','<span class="spinner"></span> Adding to stock and syncing to Google Sheets...');
@@ -1275,16 +1257,15 @@ function renderInventory() {
    GOOGLE SHEETS SYNC
 ═══════════════════════════════════════════════════ */
 async function syncSearchToSheet(mfr, type, thick, x, y) {
-  if (!CFG.apiKey) return;
   setSyncBadge('syncing', 'Syncing...');
   try {
-    const url = `${SHEETS_BASE}/${CFG.sheetId}/values/JOB+INPUT!B2:B6?valueInputOption=USER_ENTERED&key=${CFG.apiKey}`;
-    const resp = await fetch(url, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [[mfr],[type],[parseFloat(thick)],[x],[y]] })
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'jobinput', mfr, type, thick, x, y })
     });
-    setSyncBadge(resp.ok ? 'synced' : 'error', resp.ok ? 'Sheet updated' : 'Sync failed');
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
   } catch(e) {
     setSyncBadge('error', 'Offline');
@@ -1292,26 +1273,23 @@ async function syncSearchToSheet(mfr, type, thick, x, y) {
 }
 
 async function syncAddToSheet(item, area) {
-  if (!CFG.apiKey) return false;
   setSyncBadge('syncing', 'Syncing...');
   try {
-    const row = [item.date, item.by, item.mfr, item.type, parseFloat(item.thick), item.x, item.y, area, item.code, item.cond, item.rack, item.slot, '', 'Available', item.comments];
-    const url = `${SHEETS_BASE}/${CFG.sheetId}/values/INVENTORY!A:O/append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS&key=${CFG.apiKey}`;
-    const resp = await fetch(url, {
+    const resp = await fetch(WEBAPP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ values: [row] })
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'add',
+        date: item.date, by: item.by, mfr: item.mfr, type: item.type,
+        thick: item.thick, x: item.x, y: item.y, area,
+        code: item.code, cond: item.cond, rack: item.rack,
+        slot: item.slot, comments: item.comments
+      })
     });
-    if (!resp.ok) {
-      const errData = await resp.json().catch(()=>({}));
-      const errMsg = errData?.error?.message || 'Sync failed';
-      setSyncBadge('error', 'Write failed');
-      console.error('Sheets write error:', errMsg);
-      return false;
-    }
-    setSyncBadge('synced', 'Sheet updated');
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
-    return true;
+    return data.ok;
   } catch(e) {
     setSyncBadge('error', 'Offline');
     console.error('Sheets sync error:', e);
