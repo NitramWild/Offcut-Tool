@@ -404,6 +404,11 @@
 </head>
 <body>
 
+<div id="loading-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+  <div style="font-size:14px;color:var(--text2);font-weight:500;" id="loading-msg">Loading inventory from Google Sheets...</div>
+</div>
+
 <header>
   <div class="logo">
     <div class="logo-icon">
@@ -774,117 +779,9 @@ function populateAllMfrs() {
 }
 
 /* ═══════════════════════════════════════════════════
-   INVENTORY (seed data from the actual Google Sheet)
+   INVENTORY — loaded live from Google Sheets on startup
 ═══════════════════════════════════════════════════ */
-const SEED = [
-  {code:'C1',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:45,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C2',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:67,y:40,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C3',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:47,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C4',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:86,y:46,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C5',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:82,y:52,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C6',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:107,y:40,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C7',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:45,y:45,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C8',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:72,y:52,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C9',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:47,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C10',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:44,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C11',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:32,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C12',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:32,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C13',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:32,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C14',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:48,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C15',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C16',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C17',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:65,y:46,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C18',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:80,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C19',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:25,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C20',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:31,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C21',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:44,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C22',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:54,y:44,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C23',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:95,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C24',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:107,y:80,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C25',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:31,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C26',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C27',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:25,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C28',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C29',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:56,y:49,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C30',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:76,y:27,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C31',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:76,y:41,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C32',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:62,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C33',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:80,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C34',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:46,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C35',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:97,y:30,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C36',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:53,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C37',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:58,y:57,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C38',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:38,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C39',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:46,y:80,cond:'OK',rack:'A',slot:'4',status:'Available',comments:''},
-  {code:'C40',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:58,y:48,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C41',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:51,y:55,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C42',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:29,y:106,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C43',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:51,y:88,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C44',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:50,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C45',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:29,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C46',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:30,y:47,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C47',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:24,y:107,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C48',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:47,y:88,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C49',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:41,y:72,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C50',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:55,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C51',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:39,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C52',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:52,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C53',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:42,y:41,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C54',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:34,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C55',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:27,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C56',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:30,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C57',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:43,y:85,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C58',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:50,y:67,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C59',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:30,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C60',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:30,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C61',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:32,y:56,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C62',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:39,y:152,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C63',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:43,y:152,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C64',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:45,y:39,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C65',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:36,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C66',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:35,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C67',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:39,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C68',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:43,y:152,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C69',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:62,y:93,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C70',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:34,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C71',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:58,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C72',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:68,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C73',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:29,y:78,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'C74',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:56,y:39,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A1',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:52,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A2',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:53,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A3',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:100,y:52,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A4',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:56,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A5',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:107,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A6',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:47,y:76,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A7',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:51,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A8',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:54,y:67,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A9',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:40,y:88,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A10',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:52,y:69,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A11',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:52,y:96,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A12',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:106,y:45,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A13',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:45,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A14',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:45,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A15',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:29,y:87,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A16',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:29,y:70,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A17',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:128,y:33,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A18',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:57,y:53,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A19',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:58,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A20',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:48,y:80,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A21',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:42,y:134,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A22',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:32,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A23',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:40,y:86,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A24',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:47,y:86,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A25',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.14',x:41,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A26',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.14',x:41,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A27',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.14',x:62,y:64,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A28',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'2.84',x:127,y:151,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A29',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.7',x:127,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A30',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.7',x:40,y:203,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-  {code:'A31',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.7',x:40,y:203,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
-];
-
-let inventory = JSON.parse(JSON.stringify(SEED));
+let inventory = [];
 
 /* ═══════════════════════════════════════════════════
    HELPERS
@@ -1343,12 +1240,57 @@ function refreshNextCode() {
   el.style.fontStyle = 'normal';
 }
 
-function init() {
+async function loadInventoryFromSheet() {
+  try {
+    const resp = await fetch(WEBAPP_URL);
+    const data = await resp.json();
+    if (data.ok && Array.isArray(data.inventory)) {
+      // Normalise: ensure x is always the larger dimension
+      inventory = data.inventory.map(i => {
+        const x = parseFloat(i.x) || 0;
+        const y = parseFloat(i.y) || 0;
+        return { ...i, x: Math.max(x,y), y: Math.min(x,y), thick: String(i.thick) };
+      });
+      console.log(`Loaded ${inventory.length} items from Google Sheets`);
+      return true;
+    } else {
+      console.warn('Unexpected response from sheet:', data);
+      return false;
+    }
+  } catch(e) {
+    console.error('Failed to load inventory:', e);
+    return false;
+  }
+}
+
+async function init() {
   populateAllMfrs();
   updateConfigBanner();
   document.getElementById('cfg-apikey').value = CFG.apiKey;
-  setSyncBadge('synced', 'Connected');
+
+  // Fetch live inventory from Google Sheets
+  const loaded = await loadInventoryFromSheet();
+
+  // Hide loading overlay
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.remove();
+
+  if (loaded) {
+    setSyncBadge('synced', 'Inventory loaded');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+  } else {
+    setSyncBadge('error', 'Load failed — check connection');
+    // Show a warning banner
+    const banner = document.getElementById('config-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      banner.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div><strong>Could not load inventory from Google Sheets.</strong> Check your internet connection and try refreshing the page.</div>`;
+    }
+  }
+
   refreshNextCode();
+  renderInventory();
 }
 init();
 </script>
