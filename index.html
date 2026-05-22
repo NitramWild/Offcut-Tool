@@ -447,6 +447,7 @@
 
     <div class="card">
       <div class="card-title">New offcut details</div>
+      <div id="next-code-preview" style="display:none;background:#085041;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-weight:600;font-size:0.95rem;"></div>
       <div class="form-grid" style="margin-bottom:12px;">
         <div class="form-group">
           <label>Operator (your name)</label>
@@ -462,7 +463,7 @@
         <div></div>
         <div class="form-group">
           <label>Manufacturer</label>
-          <select id="a-mfr" onchange="updateTypes('a-mfr','a-type','a-thick')">
+          <select id="a-mfr" onchange="updateTypes('a-mfr','a-type','a-thick'); refreshCodePreview()">
             <option value="">Select manufacturer...</option>
           </select>
         </div>
@@ -819,9 +820,24 @@ function getToday() {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-function nextCode() {
-  const nums = inventory.map(i=>i.code).filter(c=>c.startsWith('C')).map(c=>parseInt(c.slice(1))).filter(n=>!isNaN(n));
-  return 'C' + ((nums.length ? Math.max(...nums) : 0) + 1);
+const MFR_PREFIX = { 'DuPont':'A', 'MacDermid':'B', 'XSYS':'C', 'Polyflex':'D' };
+
+function nextCode(mfr) {
+  const prefix = MFR_PREFIX[mfr] || 'E';
+  const nums = inventory.map(i=>i.code).filter(c=>c.startsWith(prefix)).map(c=>parseInt(c.slice(1))).filter(n=>!isNaN(n));
+  return prefix + ((nums.length ? Math.max(...nums) : 0) + 1);
+}
+
+function refreshCodePreview() {
+  const mfr = document.getElementById('a-mfr').value;
+  const el  = document.getElementById('next-code-preview');
+  if (!el) return;
+  if (mfr) {
+    el.textContent = 'This plate will be assigned code: ' + nextCode(mfr);
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
 }
 
 function setSyncBadge(state, text) {
@@ -950,7 +966,7 @@ async function doAdd() {
   const btn = document.getElementById('add-btn');
   btn.disabled = true;
 
-  const code  = nextCode();
+  const code  = nextCode(mfr);
   const today = getToday();
   const area  = x * y;
   const item  = { code, date:today, by:operator, mfr, type, thick, x, y, cond, rack, slot, status:'Available', comments };
@@ -971,6 +987,7 @@ async function doAdd() {
   document.getElementById('a-mfr').value = '';
   updateTypes('a-mfr','a-type','a-thick');
   document.getElementById('a-cond').value = 'OK';
+  refreshCodePreview();
   btn.disabled = false;
 }
 
