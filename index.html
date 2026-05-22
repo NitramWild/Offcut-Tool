@@ -1090,10 +1090,40 @@ async function testConnection() {
 /* ═══════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════ */
+async function loadInventoryFromSheet() {
+  setSyncBadge('syncing', 'Loading inventory...');
+  try {
+    const resp = await fetch(WEBAPP_URL);
+    const data = await resp.json();
+    if (data.ok && data.inventory && data.inventory.length > 0) {
+      inventory = data.inventory.map(i => {
+        const x = parseFloat(i.x) || 0;
+        const y = parseFloat(i.y) || 0;
+        return {
+          ...i,
+          x: Math.max(x, y),
+          y: Math.min(x, y),
+          thick:  String(i.thick).trim(),
+          status: String(i.status || 'Available').trim(),
+          cond:   String(i.cond || 'OK').trim(),
+          mfr:    String(i.mfr || '').trim(),
+          type:   String(i.type || '').trim(),
+          code:   String(i.code || '').trim()
+        };
+      });
+      setSyncBadge('synced', 'Connected');
+    } else {
+      setSyncBadge('error', 'Load failed');
+    }
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+  }
+}
+
 function init() {
   populateAllMfrs();
   updateConfigBanner();
-  setSyncBadge('synced', 'Connected');
+  loadInventoryFromSheet();
 }
 init();
 </script>
