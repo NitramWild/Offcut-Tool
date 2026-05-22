@@ -5,1095 +5,666 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Polyflex Offcut Optimizer</title>
 <style>
-  :root {
-    --bg: #f4f2ee;
-    --surface: #ffffff;
-    --surface2: #f9f8f6;
-    --border: #e2dfd8;
-    --border2: #ccc9c0;
-    --text: #1a1916;
-    --text2: #6b6860;
-    --text3: #9c9a94;
-    --accent: #1a1916;
-    --green-bg: #eaf3de;
-    --green-text: #27500a;
-    --amber-bg: #faeeda;
-    --amber-text: #633806;
-    --red-bg: #fcebeb;
-    --red-text: #791f1f;
-    --blue-bg: #e6f1fb;
-    --blue-text: #0c447c;
-    --teal-bg: #e1f5ee;
-    --teal-text: #085041;
-    --gold: #c9a84c;
-    --silver: #9ca3af;
-    --bronze: #b87333;
-    --radius: 10px;
-    --radius-sm: 6px;
-    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-  }
+:root {
+  --bg:#f4f2ee;--surface:#ffffff;--surface2:#f9f8f6;
+  --border:#e2dfd8;--border2:#ccc9c0;
+  --text:#1a1916;--text2:#6b6860;--text3:#9c9a94;
+  --green-bg:#eaf3de;--green-text:#27500a;
+  --amber-bg:#faeeda;--amber-text:#633806;
+  --red-bg:#fcebeb;--red-text:#791f1f;
+  --blue-bg:#e6f1fb;--blue-text:#0c447c;
+  --gold:#c9a84c;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,0.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.5;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* HEADER */
+header{background:var(--text);color:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:30px;height:30px;background:var(--gold);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+.logo-icon svg{width:16px;height:16px;fill:#1a1916;}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-0.01em;}
+.logo-sub{font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px;}
+#sync-badge{font-size:12px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.75);display:flex;align-items:center;gap:6px;transition:all 0.3s;}
+#sync-badge.synced{background:rgba(39,80,10,0.4);color:#b8f08a;}
+#sync-badge.syncing{background:rgba(99,56,6,0.4);color:#fcd98a;}
+#sync-badge.error{background:rgba(121,31,31,0.4);color:#f8b8b8;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
 
-  body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    font-size: 15px;
-    line-height: 1.5;
-  }
+/* NAV TABS */
+nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 24px;gap:2px;}
+.tab-btn{padding:14px 20px;font-size:14px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;display:flex;align-items:center;gap:7px;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--text);}
+.tab-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;}
 
-  /* ── Header ── */
-  header {
-    background: var(--text);
-    color: #fff;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 58px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .logo-icon {
-    width: 30px; height: 30px;
-    background: var(--gold);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .logo-icon svg { width: 16px; height: 16px; fill: #1a1916; }
-  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-  .logo-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 1px; }
-  #sync-badge {
-    font-size: 12px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.6);
-    display: flex; align-items: center; gap: 6px;
-    transition: all 0.3s;
-  }
-  #sync-badge.syncing { background: rgba(201,168,76,0.2); color: var(--gold); }
-  #sync-badge.synced  { background: rgba(100,200,100,0.15); color: #7ecb7e; }
-  #sync-badge.error   { background: rgba(220,80,80,0.15); color: #f08080; }
+/* PANELS */
+.panel{display:none;max-width:1100px;margin:0 auto;padding:28px 24px;}
+.panel.active{display:block;}
 
-  /* ── Layout ── */
-  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;box-shadow:var(--shadow);}
+.card h2{font-size:16px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card h2 svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;opacity:0.6;}
 
-  /* ── Tabs ── */
-  .tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 4px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow);
-  }
-  .tab {
-    flex: 1;
-    padding: 9px 12px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    border-radius: 7px;
-    border: none;
-    background: transparent;
-    color: var(--text2);
-    transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-  }
-  .tab svg { width: 15px; height: 15px; flex-shrink: 0; }
-  .tab:hover { background: var(--bg); color: var(--text); }
-  .tab.active { background: var(--text); color: #fff; box-shadow: var(--shadow); }
-  .panel { display: none; }
-  .panel.active { display: block; }
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid.three{grid-template-columns:1fr 1fr 1fr;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;}
+.form-group input,.form-group select{padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--surface2);color:var(--text);transition:border-color 0.15s,box-shadow 0.15s;font-family:inherit;}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:#888;box-shadow:0 0 0 3px rgba(0,0,0,0.06);}
+.form-group select{cursor:pointer;}
 
-  /* ── Cards ── */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    box-shadow: var(--shadow);
-    margin-bottom: 16px;
-  }
-  .card-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--text3);
-    margin-bottom: 16px;
-  }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;font-family:inherit;}
+.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.5;}
+.btn-primary{background:var(--text);color:#fff;}
+.btn-primary:hover{background:#333;}
+.btn-primary:disabled{background:#bbb;cursor:not-allowed;}
+.btn-outline{background:transparent;color:var(--text);border:1.5px solid var(--border2);}
+.btn-outline:hover{border-color:#888;background:var(--surface2);}
+.btn-green{background:#27500a;color:#fff;}
+.btn-green:hover{background:#1e3c07;}
+.btn-green:disabled{background:#aaa;cursor:not-allowed;}
+.btn-red{background:#791f1f;color:#fff;}
+.btn-red:hover{background:#5c1717;}
 
-  /* ── Forms ── */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-group label { font-size: 12px; font-weight: 500; color: var(--text2); }
-  .form-group.span2 { grid-column: span 2; }
+/* MESSAGES */
+.msg{padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;margin-top:12px;display:flex;align-items:center;gap:8px;}
+.msg-success{background:var(--green-bg);color:var(--green-text);}
+.msg-error{background:var(--red-bg);color:var(--red-text);}
+.msg-warning{background:var(--amber-bg);color:var(--amber-text);}
+.msg-info{background:var(--blue-bg);color:var(--blue-text);}
 
-  select, input[type="text"], input[type="number"] {
-    width: 100%;
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface2);
-    color: var(--text);
-    font-size: 14px;
-    font-family: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6860' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
-  select:focus, input:focus { outline: none; border-color: var(--text); box-shadow: 0 0 0 3px rgba(26,25,22,0.08); }
-  select:disabled, input:disabled { opacity: 0.5; cursor: not-allowed; }
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.04em;}
+.badge-ok{background:var(--green-bg);color:var(--green-text);}
+.badge-check{background:var(--amber-bg);color:var(--amber-text);}
+.badge-avail{background:var(--blue-bg);color:var(--blue-text);}
+.badge-used{background:var(--border);color:var(--text2);}
 
-  /* ── Buttons ── */
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 10px 20px;
-    font-size: 14px; font-weight: 500; font-family: inherit;
-    border-radius: var(--radius-sm);
-    border: none; cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
-  .btn-primary { background: var(--text); color: #fff; }
-  .btn-primary:hover { background: #333; }
-  .btn-primary:active { transform: scale(0.98); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border2); }
-  .btn-outline:hover { background: var(--bg); }
+/* SEARCH RESULTS */
+.results-grid{display:grid;gap:12px;margin-top:16px;}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:16px;transition:box-shadow 0.2s;}
+.result-card:hover{box-shadow:var(--shadow-md);}
+.result-card.used-card{opacity:0.45;pointer-events:none;}
+.rank-badge{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;}
+.rank-1{background:#fdf3d8;color:#9a6c00;}
+.rank-2{background:#f0f0f0;color:#555;}
+.rank-3{background:#fce8d8;color:#7a3a0a;}
+.rank-other{background:var(--surface2);color:var(--text2);}
+.result-info{flex:1;min-width:0;}
+.result-code{font-weight:700;font-size:15px;letter-spacing:-0.01em;}
+.result-dims{font-size:13px;color:var(--text2);margin-top:2px;}
+.result-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.waste-bar-wrap{flex:1;max-width:140px;}
+.waste-label{font-size:11px;color:var(--text3);margin-bottom:3px;}
+.waste-bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;}
+.waste-fill{height:100%;border-radius:3px;transition:width 0.4s;}
+.waste-pct{font-size:12px;font-weight:700;margin-top:3px;}
+.result-actions{display:flex;gap:8px;align-items:center;}
 
-  /* ── Messages ── */
-  .msg {
-    padding: 12px 16px;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    margin-bottom: 12px;
-    display: flex; align-items: flex-start; gap: 10px;
-  }
-  .msg svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
-  .msg-success { background: var(--green-bg); color: var(--green-text); }
-  .msg-error   { background: var(--red-bg);   color: var(--red-text); }
-  .msg-info    { background: var(--blue-bg);  color: var(--blue-text); }
-  .msg-warning { background: var(--amber-bg); color: var(--amber-text); }
+/* INVENTORY */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;box-shadow:var(--shadow);}
+.stat-num{font-size:32px;font-weight:800;letter-spacing:-0.03em;line-height:1;}
+.stat-lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text2);margin-top:6px;font-weight:600;}
+.filter-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-row input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);font-family:inherit;}
+.filter-row input:focus{outline:none;border-color:#888;}
+.filter-row select{padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);cursor:pointer;font-family:inherit;}
+.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--surface2);}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.code-cell{font-weight:700;letter-spacing:-0.01em;}
 
-  /* ── Badges ── */
-  .badge {
-    display: inline-flex; align-items: center;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 11px; font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-  .badge-ok     { background: var(--green-bg); color: var(--green-text); }
-  .badge-check  { background: var(--amber-bg); color: var(--amber-text); }
-  .badge-avail  { background: var(--teal-bg);  color: var(--teal-text); }
-  .badge-used   { background: var(--red-bg);   color: var(--red-text); }
+/* SETTINGS */
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px;box-shadow:var(--shadow);}
+.setup-card h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+.setup-card p{font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;}
+.api-input-row{display:flex;gap:10px;}
+.api-input-row input{flex:1;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:monospace;background:var(--surface2);}
+.api-input-row input:focus{outline:none;border-color:#888;}
 
-  /* ── Search results ── */
-  .results-header {
-    font-size: 12px; color: var(--text2);
-    margin-bottom: 10px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .result-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 8px;
-    display: flex; align-items: center; gap: 14px;
-    box-shadow: var(--shadow);
-    transition: box-shadow 0.15s;
-  }
-  .result-card:hover { box-shadow: var(--shadow-md); }
-  .result-card.best { border-color: var(--gold); }
+/* OVERLAY / MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.overlay-box{background:var(--surface);border-radius:var(--radius);padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.overlay-box h3{font-size:17px;font-weight:700;margin-bottom:10px;}
+.overlay-box p{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px;}
+.overlay-actions{display:flex;gap:10px;justify-content:flex-end;}
 
-  .rank-badge {
-    width: 38px; height: 38px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: 700; flex-shrink: 0;
-  }
-  .rank-1 { background: #fef3c7; color: #78350f; border: 2px solid var(--gold); }
-  .rank-2 { background: #f3f4f6; color: #374151; border: 2px solid var(--silver); }
-  .rank-3 { background: #fef0e6; color: #7c2d12; border: 2px solid var(--bronze); }
-  .rank-n { background: var(--bg); color: var(--text2); border: 1px solid var(--border); }
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-  .result-main { flex: 1; min-width: 0; }
-  .result-code { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-  .result-meta { font-size: 12px; color: var(--text2); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .meta-dot { color: var(--border2); }
+/* CONFIG BANNER */
+#config-banner{display:none;background:var(--amber-bg);color:var(--amber-text);padding:10px 24px;font-size:13px;align-items:center;gap:10px;border-bottom:1px solid #f0d8a0;}
+#config-banner svg{flex-shrink:0;}
 
-  .waste-col { text-align: right; flex-shrink: 0; min-width: 110px; }
-  .waste-pct { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
-  .waste-bar-bg { height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
-  .waste-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-
-  /* ── Inventory table ── */
-  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--surface2); }
-  td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--surface2); }
-  td.code-cell { font-weight: 600; font-size: 14px; }
-
-  /* ── Stats ── */
-  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; box-shadow: var(--shadow); }
-  .stat-num { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-  .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
-
-  /* ── Filter row ── */
-  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .filter-row input { flex: 1; min-width: 160px; }
-  .filter-row select { width: auto; min-width: 130px; }
-
-  /* ── Empty states ── */
-  .empty-state {
-    text-align: center; padding: 40px 20px;
-    border: 1px dashed var(--border2);
-    border-radius: var(--radius);
-    color: var(--text2);
-  }
-  .empty-state svg { width: 36px; height: 36px; margin-bottom: 10px; opacity: 0.4; }
-  .empty-state p { font-size: 14px; }
-  .empty-state small { font-size: 12px; color: var(--text3); }
-
-  /* ── Spinner ── */
-  .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: inline-block;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Config banner ── */
-  .config-banner {
-    background: var(--amber-bg);
-    border: 1px solid #f0c060;
-    border-radius: var(--radius);
-    padding: 14px 18px;
-    margin-bottom: 16px;
-    font-size: 13px;
-    color: var(--amber-text);
-    display: flex; align-items: flex-start; gap: 10px;
-  }
-  .config-banner svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
-
-  /* ── Setup section ── */
-  .setup-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 16px;
-    box-shadow: var(--shadow);
-  }
-  .setup-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
-  .setup-card p { font-size: 13px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
-  .api-input-row { display: flex; gap: 8px; }
-  .api-input-row input { flex: 1; font-family: monospace; font-size: 13px; }
-
-  /* ── Divider ── */
-  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-
-  /* ── Responsive ── */
-  @media (max-width: 600px) {
-    .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
-    .form-group.span2 { grid-column: span 1; }
-    .stats-row { grid-template-columns: repeat(3, 1fr); }
-    .stat-num { font-size: 20px; }
-    header { padding: 0 14px; }
-    .container { padding: 16px 12px 60px; }
-  }
-
-  /* ── Use offcut button ── */
-  .btn-use {
-    background: #1a6b2f;
-    color: #fff;
-    border: none;
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    font-family: inherit;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-  .btn-use:hover { background: #145422; }
-  .btn-use:active { transform: scale(0.97); }
-  .btn-use:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-use svg { width: 14px; height: 14px; }
-
-  /* ── Confirm overlay ── */
-  .overlay-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.45);
-    z-index: 500;
-    display: flex; align-items: center; justify-content: center;
-    padding: 16px;
-  }
-  .overlay-box {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 24px;
-    max-width: 420px;
-    width: 100%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-  }
-  .overlay-box h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-  .overlay-box p  { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 16px; }
-  .overlay-detail {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px 14px;
-    margin-bottom: 16px;
-    font-size: 13px;
-    line-height: 1.8;
-  }
-  .overlay-detail strong { color: var(--text); }
-  .overlay-actions { display: flex; gap: 8px; justify-content: flex-end; }
-
-  /* ── Used card state ── */
-  .result-card.used-card {
-    opacity: 0.5;
-    pointer-events: none;
-    border-color: var(--border);
-  }
-  .used-stamp {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--red-text);
-    background: var(--red-bg);
-    padding: 4px 10px;
-    border-radius: 20px;
-    flex-shrink: 0;
-  }
-
-  /* ── Print ── */
-  @media print {
-    header { position: static; }
-    .tabs, .btn, .filter-row, .config-banner { display: none !important; }
-    .panel { display: block !important; }
-  }
+@media(max-width:640px){
+  .form-grid,.form-grid.three{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .result-card{flex-wrap:wrap;}
+  nav{overflow-x:auto;}
+  .tab-btn{padding:12px 14px;font-size:13px;}
+}
 </style>
 </head>
 <body>
 
-<div id="loading-overlay" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-  <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
-  <div style="font-size:14px;color:var(--text2);font-weight:500;" id="loading-msg">Loading inventory from Google Sheets...</div>
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:var(--text2);font-weight:500;">Loading inventory from Google Sheets…</div>
+</div>
+
+<div id="config-banner">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span id="banner-msg">Could not load inventory from Google Sheets. Check your connection and refresh the page.</span>
 </div>
 
 <header>
   <div class="logo">
     <div class="logo-icon">
-      <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 9h11v4H3zM3 15h7v4H3z"/></svg>
+      <svg viewBox="0 0 24 24"><rect x="2" y="2" width="9" height="9"/><rect x="13" y="2" width="9" height="9"/><rect x="2" y="13" width="9" height="9"/><rect x="13" y="13" width="9" height="9"/></svg>
     </div>
     <div>
       <div class="logo-text">Offcut Optimizer</div>
       <div class="logo-sub">Polyflex plate stock</div>
     </div>
   </div>
-  <div id="sync-badge">
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16"/></svg>
-    <span id="sync-text">Not connected</span>
-  </div>
+  <div id="sync-badge"><div class="sync-dot"></div><span id="sync-text">Connecting…</span></div>
 </header>
 
-<div class="container">
+<nav>
+  <button class="tab-btn active" onclick="showTab('search')" id="tab-search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Find offcut
+  </button>
+  <button class="tab-btn" onclick="showTab('add')" id="tab-add">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add to stock
+  </button>
+  <button class="tab-btn" onclick="showTab('inventory')" id="tab-inventory">
+    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Inventory
+  </button>
+  <button class="tab-btn" onclick="showTab('settings')" id="tab-settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Settings
+  </button>
+</nav>
 
-  <!-- API Key setup banner — shown until configured -->
-  <div class="config-banner" id="config-banner">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <div>
-      <strong>Google Sheets sync not yet configured.</strong> The tool works fully offline right now.
-      To enable live syncing with your spreadsheet, go to the <strong>Settings</strong> tab and paste in your API key and Sheet ID.
+<!-- FIND OFFCUT -->
+<div id="panel-search" class="panel active">
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Find best offcut
+    </h2>
+    <div class="form-grid three">
+      <div class="form-group">
+        <label>Manufacturer</label>
+        <select id="s-mfr" onchange="updateTypes('s-mfr','s-type','s-thick')">
+          <option value="">Select manufacturer…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Plate type</label>
+        <select id="s-type" onchange="updateThicknesses('s-type','s-thick')">
+          <option value="">Select type…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Thickness</label>
+        <select id="s-thick">
+          <option value="">Select thickness…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Width needed — X (cm)</label>
+        <input type="number" id="s-x" placeholder="e.g. 45" min="1" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Height needed — Y (cm)</label>
+        <input type="number" id="s-y" placeholder="e.g. 38" min="1" step="0.1">
+      </div>
+      <div class="form-group" style="justify-content:flex-end;padding-top:20px;">
+        <button class="btn btn-primary" onclick="doSearch()">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Find best match
+        </button>
+      </div>
     </div>
   </div>
+  <div id="search-results"></div>
+</div>
 
-  <!-- Tabs -->
-  <div class="tabs" role="tablist">
-    <button class="tab active" onclick="showTab('search')" role="tab" aria-selected="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Find offcut
-    </button>
-    <button class="tab" onclick="showTab('add')" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add to stock
-    </button>
-    <button class="tab" onclick="showTab('inventory')" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      Inventory
-    </button>
-    <button class="tab" onclick="showTab('settings')" role="tab">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Settings
-    </button>
-  </div>
-
-  <!-- ═══════════════════════════════════
-       TAB 1 — FIND OFFCUT
-  ═══════════════════════════════════ -->
-  <div id="tab-search" class="panel active">
-
-    <div class="card">
-      <div class="card-title">Job requirements</div>
-      <div class="form-grid" style="margin-bottom:12px;">
-        <div class="form-group">
-          <label>Operator</label>
-          <select id="s-operator">
-            <option value="">Select your name...</option>
-            <option>Lonwabo</option>
-            <option>Zing</option>
-            <option>Siya</option>
-            <option>Tashreeq</option>
-            <option>Imraan</option>
-          </select>
-        </div>
-        <div></div>
-        <div class="form-group">
-          <label>Manufacturer</label>
-          <select id="s-mfr" onchange="updateTypes('s-mfr','s-type','s-thick')">
-            <option value="">Select manufacturer...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Plate type</label>
-          <select id="s-type" onchange="updateThick('s-mfr','s-type','s-thick')" disabled>
-            <option value="">Select type...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Thickness (mm)</label>
-          <select id="s-thick" disabled>
-            <option value="">Select thickness...</option>
-          </select>
-        </div>
-        <div></div>
-        <div class="form-group">
-          <label>Width needed — X (cm)</label>
-          <input type="number" id="s-x" placeholder="e.g. 50" min="1" step="1">
-        </div>
-        <div class="form-group">
-          <label>Height needed — Y (cm)</label>
-          <input type="number" id="s-y" placeholder="e.g. 52" min="1" step="1">
-        </div>
+<!-- ADD TO STOCK -->
+<div id="panel-add" class="panel">
+  <div class="card">
+    <h2>
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add offcut to stock
+    </h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Operator</label>
+        <select id="a-operator">
+          <option value="">Select operator…</option>
+          <option>Lonwabo</option>
+          <option>Zing</option>
+          <option>Siya</option>
+          <option>Tashreeq</option>
+          <option>Imraan</option>
+        </select>
       </div>
-      <button class="btn btn-primary" onclick="doSearch()" id="search-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        Find best offcuts
-      </button>
+      <div class="form-group">
+        <label>Manufacturer</label>
+        <select id="a-mfr" onchange="updateTypes('a-mfr','a-type','a-thick')">
+          <option value="">Select manufacturer…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Plate type</label>
+        <select id="a-type" onchange="updateThicknesses('a-type','a-thick')">
+          <option value="">Select type…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Thickness</label>
+        <select id="a-thick">
+          <option value="">Select thickness…</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Width — X (cm)</label>
+        <input type="number" id="a-x" placeholder="e.g. 72" min="0.1" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Height — Y (cm)</label>
+        <input type="number" id="a-y" placeholder="e.g. 52" min="0.1" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Plate condition</label>
+        <select id="a-cond">
+          <option value="OK">OK — good condition</option>
+          <option value="CHECK">CHECK — needs inspection</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Storage rack (optional)</label>
+        <input type="text" id="a-rack" placeholder="e.g. A">
+      </div>
+      <div class="form-group">
+        <label>Storage slot (optional)</label>
+        <input type="text" id="a-slot" placeholder="e.g. 4">
+      </div>
+      <div class="form-group">
+        <label>Comments (optional)</label>
+        <input type="text" id="a-comments" placeholder="Any notes about this offcut…">
+      </div>
     </div>
-
-    <div id="search-results"></div>
-  </div>
-
-  <!-- ═══════════════════════════════════
-       TAB 2 — ADD TO STOCK
-  ═══════════════════════════════════ -->
-  <div id="tab-add" class="panel">
-
-    <div class="card">
-      <div class="card-title">New offcut details</div>
-      <div id="next-code-banner" style="display:flex;align-items:center;gap:10px;background:var(--teal-bg);border:1px solid #9dd4be;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--teal-text);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
-        <span>This offcut will be automatically assigned code: <strong id="next-code-preview">...</strong></span>
-      </div>
-      <div class="form-grid" style="margin-bottom:12px;">
-        <div class="form-group">
-          <label>Operator (your name)</label>
-          <select id="a-operator">
-            <option value="">Select your name...</option>
-            <option>Lonwabo</option>
-            <option>Zing</option>
-            <option>Siya</option>
-            <option>Tashreeq</option>
-            <option>Imraan</option>
-          </select>
-        </div>
-        <div></div>
-        <div class="form-group">
-          <label>Manufacturer</label>
-          <select id="a-mfr" onchange="updateTypes('a-mfr','a-type','a-thick'); refreshNextCode();">
-            <option value="">Select manufacturer...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Plate type</label>
-          <select id="a-type" onchange="updateThick('a-mfr','a-type','a-thick')" disabled>
-            <option value="">Select type...</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Thickness (mm)</label>
-          <select id="a-thick" disabled>
-            <option value="">Select thickness...</option>
-          </select>
-        </div>
-        <div></div>
-        <div class="form-group">
-          <label>Width — X (cm)</label>
-          <input type="number" id="a-x" placeholder="e.g. 150" min="1" step="1">
-        </div>
-        <div class="form-group">
-          <label>Height — Y (cm)</label>
-          <input type="number" id="a-y" placeholder="e.g. 120" min="1" step="1">
-        </div>
-        <div class="form-group">
-          <label>Plate condition</label>
-          <select id="a-cond">
-            <option value="OK">OK — good condition</option>
-            <option value="CHECK">CHECK — needs inspection</option>
-          </select>
-        </div>
-        <div></div>
-        <div class="form-group">
-          <label>Storage rack (optional)</label>
-          <input type="text" id="a-rack" placeholder="e.g. A">
-        </div>
-        <div class="form-group">
-          <label>Storage slot (optional)</label>
-          <input type="text" id="a-slot" placeholder="e.g. 4">
-        </div>
-        <div class="form-group span2">
-          <label>Comments (optional)</label>
-          <input type="text" id="a-comments" placeholder="Any notes about this offcut...">
-        </div>
-      </div>
+    <div style="margin-top:16px;">
       <button class="btn btn-primary" onclick="doAdd()" id="add-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Add to stock
       </button>
     </div>
-
-    <div id="add-msg"></div>
   </div>
+  <div id="add-msg"></div>
+</div>
 
-  <!-- ═══════════════════════════════════
-       TAB 3 — INVENTORY
-  ═══════════════════════════════════ -->
-  <div id="tab-inventory" class="panel">
-    <div class="stats-row" id="inv-stats"></div>
-    <div class="filter-row">
-      <input type="text" id="inv-search" placeholder="Search by code, manufacturer, type, operator..." oninput="renderInventory()">
-      <select id="inv-status" onchange="renderInventory()">
-        <option value="">All status</option>
-        <option value="Available">Available</option>
-        <option value="Used">Used</option>
-      </select>
-      <select id="inv-cond" onchange="renderInventory()">
-        <option value="">All condition</option>
-        <option value="OK">OK only</option>
-        <option value="CHECK">CHECK only</option>
-      </select>
+<!-- INVENTORY -->
+<div id="panel-inventory" class="panel">
+  <div class="stats-row" id="inv-stats"></div>
+  <div class="filter-row">
+    <input type="text" id="inv-search" placeholder="Search by code, manufacturer, type, operator…" oninput="renderInventory()">
+    <select id="inv-status" onchange="renderInventory()">
+      <option value="">All status</option>
+      <option value="Available">Available</option>
+      <option value="Used">Used</option>
+    </select>
+    <select id="inv-cond" onchange="renderInventory()">
+      <option value="">All condition</option>
+      <option value="OK">OK only</option>
+      <option value="CHECK">CHECK only</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Code</th><th>Manufacturer</th><th>Type</th><th>Thick</th>
+          <th>X cm</th><th>Y cm</th><th>Area cm²</th>
+          <th>Condition</th><th>Rack</th><th>Slot</th>
+          <th>Status</th><th>Logged by</th><th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="inv-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="panel-settings" class="panel">
+  <div class="setup-card">
+    <h3>Apps Script Web App URL</h3>
+    <p>This is the URL of the Google Apps Script that connects to your Google Sheet. It is pre-configured — only change this if you redeploy your script.</p>
+    <div class="api-input-row">
+      <input type="text" id="cfg-webapp" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+      <button class="btn btn-outline" onclick="saveWebAppUrl()">Save</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Manufacturer</th>
-            <th>Type</th>
-            <th>Thick</th>
-            <th>X cm</th>
-            <th>Y cm</th>
-            <th>Area cm²</th>
-            <th>Condition</th>
-            <th>Rack</th>
-            <th>Slot</th>
-            <th>Status</th>
-            <th>Logged by</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="inv-body"></tbody>
-      </table>
+    <div id="test-result" style="margin-top:10px;"></div>
+  </div>
+  <div class="setup-card">
+    <h3>About this tool</h3>
+    <p>Polyflex Offcut Optimizer — helps operators find the best-matching plate offcut for each job, minimising waste. All inventory data is stored in Google Sheets and synced automatically.</p>
+  </div>
+</div>
+
+<!-- USE CONFIRMATION MODAL -->
+<div id="use-overlay" class="overlay" style="display:none;">
+  <div class="overlay-box">
+    <h3>Confirm use of offcut</h3>
+    <p id="use-overlay-msg">Are you sure you want to mark this offcut as used? It will be removed from available stock.</p>
+    <div class="overlay-actions">
+      <button class="btn btn-outline" onclick="closeUseOverlay()">Cancel</button>
+      <button class="btn btn-green" id="use-confirm-btn" onclick="confirmUse()">Yes, mark as used</button>
     </div>
   </div>
-
-  <!-- ═══════════════════════════════════
-       TAB 4 — SETTINGS
-  ═══════════════════════════════════ -->
-  <div id="tab-settings" class="panel">
-
-    <div class="setup-card">
-      <h3>Step 1 — Google Sheets API key</h3>
-      <p>This is the "password" that allows this tool to read and write to your Google Sheet. You will create this in Google Cloud Console. Once you have it, paste it here.</p>
-      <div class="api-input-row">
-        <input type="text" id="cfg-apikey" placeholder="Paste your API key here — e.g. AIzaSyB..." autocomplete="off">
-        <button class="btn btn-outline" onclick="saveConfig()">Save</button>
-      </div>
-    </div>
-
-    <div class="setup-card">
-      <h3>Step 2 — Google Sheet ID</h3>
-      <p>This is already filled in from your spreadsheet. Only change this if you move the data to a different sheet.</p>
-      <div class="api-input-row">
-        <input type="text" id="cfg-sheetid" value="1sXgnB7rEUzl3F36714c6sEJm7h46OS_V3yGOrSYzkFI" style="font-family:monospace; font-size:12px;">
-        <button class="btn btn-outline" onclick="saveConfig()">Save</button>
-      </div>
-    </div>
-
-    <div class="setup-card">
-      <h3>Connection test</h3>
-      <p>After saving your API key, click the button below to check that everything is connected correctly.</p>
-      <button class="btn btn-outline" onclick="testConnection()" id="test-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16"/></svg>
-        Test connection
-      </button>
-      <div id="test-result" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="setup-card">
-      <h3>About this tool</h3>
-      <p>Polyflex Offcut Optimizer — version 1.0<br>
-      Designed for semi-skilled operators to manage plate offcut stock without direct spreadsheet access.<br><br>
-      The tool always works offline. When an API key is configured and the sheet is shared correctly, all searches and stock additions are automatically mirrored to the Google Sheet in real time.</p>
-    </div>
-
-  </div>
-
-</div><!-- /container -->
+</div>
 
 <script>
 /* ═══════════════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════════════ */
-const DEFAULT_SHEET_ID = '1sXgnB7rEUzl3F36714c6sEJm7h46OS_V3yGOrSYzkFI';
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx-IokiYshR7Kh3Gmfkq8oCFTsmuskbarskVizNV6U66cZSaF06-DYxhPt5RviZzFW7/exec';
-const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
-const BAKED_API_KEY = 'AIzaSyDn0dGrUPAtwLKxWpvPvjGo4yWqFT1yJIs';
-
-let CFG = {
-  apiKey: localStorage.getItem('pf_apikey') || BAKED_API_KEY,
-  sheetId: localStorage.getItem('pf_sheetid') || DEFAULT_SHEET_ID
+const PLATE_DATA = {
+  'XSYS':    { types: { 'FTFD': ['1.14'], 'FTD': ['1.70'], 'FTQ': ['2.54'] } },
+  'Dupont':  { types: { 'Cyrel Easy': ['1.14','1.70'], 'Cyrel FAST': ['2.54','2.84'] } },
+  'Flint':   { types: { 'nyloflex ACE': ['1.14','1.70'], 'nyloflex FCP': ['2.54'] } },
+  'Toyobo':  { types: { 'Cosmolight': ['1.14','1.70','2.54'] } }
 };
 
-function saveConfig() {
-  CFG.apiKey  = document.getElementById('cfg-apikey').value.trim() || BAKED_API_KEY;
-  CFG.sheetId = document.getElementById('cfg-sheetid').value.trim() || DEFAULT_SHEET_ID;
-  localStorage.setItem('pf_apikey', CFG.apiKey);
-  localStorage.setItem('pf_sheetid', CFG.sheetId);
-  updateConfigBanner();
-  showMsg('test-result', 'success', 'Settings saved. Click "Test connection" to verify.');
-}
-
-function updateConfigBanner() {
-  document.getElementById('config-banner').style.display = CFG.apiKey ? 'none' : 'flex';
-}
-
-/* ═══════════════════════════════════════════════════
-   PLATE TYPE REFERENCE DATA
-═══════════════════════════════════════════════════ */
-const PLATE_TYPES = [
-  { mfr:'XSYS',      type:'FTFD', thick:'1.14' },
-  { mfr:'XSYS',      type:'FTFD', thick:'1.7'  },
-  { mfr:'XSYS',      type:'FTFD', thick:'2.54' },
-  { mfr:'XSYS',      type:'FTFD', thick:'2.84' },
-  { mfr:'XSYS',      type:'ACT',  thick:'1.14' },
-  { mfr:'XSYS',      type:'ACT',  thick:'1.7'  },
-  { mfr:'XSYS',      type:'ACT',  thick:'2.54' },
-  { mfr:'XSYS',      type:'ACT',  thick:'2.84' },
-  { mfr:'XSYS',      type:'FACF', thick:'4.7'  },
-  { mfr:'DuPont',    type:'EPC',  thick:'3.18' },
-  { mfr:'DuPont',    type:'ESXR', thick:'1.14' },
-  { mfr:'DuPont',    type:'ESXR', thick:'1.7'  },
-  { mfr:'DuPont',    type:'ESXR', thick:'2.54' },
-  { mfr:'DuPont',    type:'ESXR', thick:'2.84' },
-  { mfr:'DuPont',    type:'ESER', thick:'1.14' },
-  { mfr:'DuPont',    type:'ESER', thick:'1.7'  },
-  { mfr:'DuPont',    type:'ESER', thick:'2.54' },
-  { mfr:'DuPont',    type:'ESER', thick:'2.84' },
-  { mfr:'MacDermid',  type:'ITP',  thick:'1.14' },
-  { mfr:'MacDermid',  type:'ITP',  thick:'1.7'  },
-  { mfr:'MacDermid',  type:'ITP',  thick:'2.54' },
-  { mfr:'MacDermid',  type:'ITP',  thick:'2.84' },
-  { mfr:'Polyflex',   type:'DR',   thick:'3.18' },
-];
-
-function getMfrs()          { return [...new Set(PLATE_TYPES.map(p=>p.mfr))]; }
-function getTypes(mfr)      { return [...new Set(PLATE_TYPES.filter(p=>p.mfr===mfr).map(p=>p.type))]; }
-function getThicks(mfr,typ) { return [...new Set(PLATE_TYPES.filter(p=>p.mfr===mfr&&p.type===typ).map(p=>p.thick).filter(Boolean))]; }
-
-function updateTypes(mfrId, typeId, thickId) {
-  const mfr = document.getElementById(mfrId).value;
-  const tSel = document.getElementById(typeId);
-  const hSel = document.getElementById(thickId);
-  tSel.innerHTML = '<option value="">Select type...</option>';
-  hSel.innerHTML = '<option value="">Select thickness...</option>';
-  if (mfr) {
-    getTypes(mfr).forEach(t => { const o=document.createElement('option');o.value=t;o.textContent=t;tSel.appendChild(o); });
-    tSel.disabled = false;
-  } else {
-    tSel.disabled = true;
-  }
-  hSel.disabled = true;
-}
-
-function updateThick(mfrId, typeId, thickId) {
-  const mfr = document.getElementById(mfrId).value;
-  const typ = document.getElementById(typeId).value;
-  const hSel = document.getElementById(thickId);
-  hSel.innerHTML = '<option value="">Select thickness...</option>';
-  if (mfr && typ) {
-    const thicks = getThicks(mfr, typ);
-    thicks.forEach(t => { const o=document.createElement('option');o.value=t;o.textContent=t+' mm';hSel.appendChild(o); });
-    hSel.disabled = thicks.length === 0;
-    if (thicks.length === 1) { hSel.value = thicks[0]; hSel.disabled = false; }
-  } else {
-    hSel.disabled = true;
-  }
-}
-
-function populateAllMfrs() {
-  ['s-mfr','a-mfr'].forEach(id => {
-    const sel = document.getElementById(id);
-    getMfrs().forEach(m => { const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
-  });
-}
-
-/* ═══════════════════════════════════════════════════
-   INVENTORY — loaded live from Google Sheets on startup
-═══════════════════════════════════════════════════ */
 let inventory = [];
+let pendingUseCode = null;
 
 /* ═══════════════════════════════════════════════════
-   HELPERS
+   UTILITY
 ═══════════════════════════════════════════════════ */
 function getToday() {
   const d = new Date();
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-const MFR_PREFIX = {
-  'DuPont':    'A',
-  'MacDermid': 'B',
-  'XSYS':      'C',
-  'Polyflex':  'D',
-};
-function getMfrPrefix(mfr) {
-  return MFR_PREFIX[mfr] || 'E';
-}
-
-function nextCode(mfr) {
-  const prefix = mfr ? getMfrPrefix(mfr) : null;
-  if (prefix) {
-    const nums = inventory.map(i=>i.code).filter(c=>c.startsWith(prefix)).map(c=>parseInt(c.slice(1))).filter(n=>!isNaN(n));
-    return prefix + ((nums.length ? Math.max(...nums) : 0) + 1);
-  }
-  // Fallback — preview without mfr selected: show next C as placeholder
-  const allNums = inventory.map(i=>i.code).map(c=>parseInt(c.slice(1))).filter(n=>!isNaN(n));
-  return '?' + ((allNums.length ? Math.max(...allNums) : 0) + 1);
+function nextCode() {
+  const codes = inventory.map(i => parseInt(i.code.replace(/\D/g,''))).filter(n => !isNaN(n));
+  const max = codes.length ? Math.max(...codes) : 0;
+  return 'C' + (max + 1);
 }
 
 function setSyncBadge(state, text) {
-  const el = document.getElementById('sync-badge');
-  el.className = state;
-  document.getElementById('sync-text').textContent = text;
+  const badge = document.getElementById('sync-badge');
+  const txt   = document.getElementById('sync-text');
+  badge.className = state ? `${state}` : '';
+  txt.textContent = text;
 }
 
-function showMsg(containerId, type, text) {
-  const icons = {
-    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
-    error:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-    info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-  };
-  document.getElementById(containerId).innerHTML =
-    `<div class="msg msg-${type}">${icons[type]}<span>${text}</span></div>`;
+function showMsg(id, type, html) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = `<div class="msg msg-${type}">${html}</div>`;
+}
+
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'inventory') renderInventory();
 }
 
 /* ═══════════════════════════════════════════════════
-   TABS
+   DROPDOWNS
 ═══════════════════════════════════════════════════ */
-const TAB_IDS = ['search','add','inventory','settings'];
-function showTab(name) {
-  TAB_IDS.forEach((t,i) => {
-    document.getElementById('tab-'+t).classList.toggle('active', t===name);
-    document.querySelectorAll('.tab')[i].classList.toggle('active', t===name);
+function populateAllMfrs() {
+  ['s-mfr','a-mfr'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select manufacturer…</option>';
+    Object.keys(PLATE_DATA).forEach(m => {
+      const o = document.createElement('option');
+      o.value = o.textContent = m;
+      sel.appendChild(o);
+    });
   });
-  if (name === 'inventory') renderInventory();
-  if (name === 'add') refreshNextCode();
-  if (name === 'settings') {
-    document.getElementById('cfg-apikey').value = CFG.apiKey;
-    document.getElementById('cfg-sheetid').value = CFG.sheetId;
-  }
+}
+
+function updateTypes(mfrId, typeId, thickId) {
+  const mfr  = document.getElementById(mfrId).value;
+  const tSel = document.getElementById(typeId);
+  const hSel = document.getElementById(thickId);
+  tSel.innerHTML = '<option value="">Select type…</option>';
+  hSel.innerHTML = '<option value="">Select thickness…</option>';
+  if (!mfr || !PLATE_DATA[mfr]) return;
+  Object.keys(PLATE_DATA[mfr].types).forEach(t => {
+    const o = document.createElement('option');
+    o.value = o.textContent = t;
+    tSel.appendChild(o);
+  });
+}
+
+function updateThicknesses(typeId, thickId) {
+  const typeEl = document.getElementById(typeId);
+  const mfrEl  = typeId === 's-type' ? document.getElementById('s-mfr') : document.getElementById('a-mfr');
+  const hSel   = document.getElementById(thickId);
+  hSel.innerHTML = '<option value="">Select thickness…</option>';
+  const mfr  = mfrEl.value;
+  const type = typeEl.value;
+  if (!mfr || !type || !PLATE_DATA[mfr]) return;
+  const thicks = PLATE_DATA[mfr].types[type] || [];
+  thicks.forEach(t => {
+    const o = document.createElement('option');
+    o.value = o.textContent = t + ' mm';
+    hSel.appendChild(o);
+  });
 }
 
 /* ═══════════════════════════════════════════════════
    SEARCH
 ═══════════════════════════════════════════════════ */
 function doSearch() {
-  const operator = document.getElementById('s-operator').value;
-  const mfr      = document.getElementById('s-mfr').value;
-  const type     = document.getElementById('s-type').value;
-  const thick    = document.getElementById('s-thick').value;
-  const x        = parseFloat(document.getElementById('s-x').value);
-  const y        = parseFloat(document.getElementById('s-y').value);
-  const el       = document.getElementById('search-results');
+  const mfr   = document.getElementById('s-mfr').value;
+  const type  = document.getElementById('s-type').value;
+  const thick = document.getElementById('s-thick').value;
+  const xRaw  = parseFloat(document.getElementById('s-x').value);
+  const yRaw  = parseFloat(document.getElementById('s-y').value);
+  const resultsEl = document.getElementById('search-results');
 
-  if (!operator) { showMsg('search-results','error','Please select your name before searching.'); return; }
-  if (!mfr || !type || !thick) { showMsg('search-results','error','Please select manufacturer, plate type and thickness.'); return; }
-  if (!x || !y || x <= 0 || y <= 0) { showMsg('search-results','error','Please enter valid X and Y sizes greater than zero.'); return; }
-
-  const needed = x * y;
-
-  // Check both orientations — plate can be rotated to fit either way
-  const fitsNormal  = i => i.x >= x && i.y >= y;
-  const fitsRotated = i => i.x >= y && i.y >= x;
-
-  const matches = inventory
-    .filter(i => i.mfr === mfr && i.type === type && i.thick === thick && i.status === 'Available'
-              && (fitsNormal(i) || fitsRotated(i)))
-    .map(i => {
-      const area = i.x * i.y;
-      // If it fits both ways, pick the orientation with less waste (should be same area, but flag which way)
-      const wasteN = fitsNormal(i)  ? ((area - needed) / area) * 100 : Infinity;
-      const wasteR = fitsRotated(i) ? ((area - needed) / area) * 100 : Infinity;
-      const rotated = wasteR < wasteN && !fitsNormal(i);
-      return { ...i, area, waste: Math.min(wasteN, wasteR), rotated };
-    })
-    .sort((a,b) => a.waste - b.waste);
-
-  if (!matches.length) {
-    el.innerHTML = `<div class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5-2 4-2 4 2 4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-      <p>No offcuts found that are big enough for <strong>${x} × ${y} cm</strong></p>
-      <small>${mfr} · ${type} · ${thick} mm — check inventory or add a new plate</small>
-    </div>`;
+  if (!mfr || !type || !thick) {
+    resultsEl.innerHTML = '<div class="msg msg-error">Please select manufacturer, plate type and thickness.</div>';
+    return;
+  }
+  if (!xRaw || !yRaw || xRaw <= 0 || yRaw <= 0) {
+    resultsEl.innerHTML = '<div class="msg msg-error">Please enter valid X and Y sizes greater than zero.</div>';
     return;
   }
 
-  const wasteColor = w => w < 20 ? '#27500a' : w < 50 ? '#633806' : '#791f1f';
-  const wasteFill  = w => w < 20 ? '#639922' : w < 50 ? '#c9a84c' : '#e24b4a';
+  // Normalise: always use larger as x
+  const needX = Math.max(xRaw, yRaw);
+  const needY = Math.min(xRaw, yRaw);
+  const thickNum = parseFloat(thick);
 
-  let html = `<div class="results-header">
-    <strong>${matches.length}</strong> offcut${matches.length!==1?'s':''} found · sorted by least waste · searched by <strong>${operator}</strong>
-  </div>`;
+  // Sync job input to sheet (fire and forget)
+  syncJobInput(mfr, type, thickNum, needX, needY);
 
-  matches.forEach((item, i) => {
-    const rank = i + 1;
-    const rankClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
-    const loc = item.rack ? `Rack ${item.rack}${item.slot ? ', Slot '+item.slot : ''}` : 'Location not recorded';
-    html += `<div class="result-card${rank===1?' best':''}">
-      <div class="rank-badge ${rankClass}">${rank}</div>
-      <div class="result-main">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span class="result-code">${item.code}</span>
-          <span class="badge ${item.cond==='OK'?'badge-ok':'badge-check'}">${item.cond}</span>
-          ${rank===1?'<span class="badge" style="background:#fef3c7;color:#78350f;">Best match</span>':''}
-        </div>
+  // Filter inventory
+  const candidates = inventory.filter(i => {
+    if (i.status !== 'Available') return false;
+    if (i.mfr !== mfr) return false;
+    if (i.type !== type) return false;
+    if (parseFloat(i.thick) !== thickNum) return false;
+    const ix = Math.max(parseFloat(i.x), parseFloat(i.y));
+    const iy = Math.min(parseFloat(i.x), parseFloat(i.y));
+    return ix >= needX && iy >= needY;
+  });
+
+  if (!candidates.length) {
+    resultsEl.innerHTML = `<div class="msg msg-warning">No offcuts found large enough for ${needX} × ${needY} cm (${mfr} · ${type} · ${thick}). Consider using a new plate.</div>`;
+    return;
+  }
+
+  // Rank by waste
+  const needArea = needX * needY;
+  const ranked = candidates.map(i => {
+    const area  = parseFloat(i.x) * parseFloat(i.y);
+    const waste = ((area - needArea) / area) * 100;
+    return { ...i, _area: area, _waste: waste };
+  }).sort((a, b) => a._waste - b._waste);
+
+  let html = `<div style="font-size:13px;color:var(--text2);margin-bottom:10px;">${ranked.length} offcut${ranked.length>1?'s':''} found — ranked by least waste</div><div class="results-grid">`;
+
+  ranked.forEach((item, idx) => {
+    const rank = idx + 1;
+    const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
+    const wasteColor = item._waste < 20 ? '#27500a' : item._waste < 40 ? '#633806' : '#791f1f';
+    const wastePct = item._waste.toFixed(1);
+    const barWidth = Math.min(item._waste, 100).toFixed(1);
+
+    html += `
+    <div class="result-card" id="result-card-${item.code}">
+      <div class="rank-badge ${rankClass}">#${rank}</div>
+      <div class="result-info">
+        <div class="result-code">${item.code}</div>
+        <div class="result-dims">${item.x} × ${item.y} cm &nbsp;·&nbsp; ${item.mfr} ${item.type} ${item.thick} mm</div>
         <div class="result-meta">
-          <span>${item.x} × ${item.y} cm</span>
-          ${item.rotated ? '<span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:10px;">↩ rotate to fit</span>' : ''}
-          <span class="meta-dot">·</span>
-          <span>${item.mfr} ${item.type} ${item.thick} mm</span>
-          <span class="meta-dot">·</span>
-          <span>${loc}</span>
-          <span class="meta-dot">·</span>
-          <span>Logged by ${item.by}</span>
+          <span class="badge ${item.cond==='OK'?'badge-ok':'badge-check'}">${item.cond}</span>
+          ${item.rack ? `<span style="font-size:12px;color:var(--text2);">Rack ${item.rack}${item.slot?' · Slot '+item.slot:''}</span>` : ''}
         </div>
       </div>
-      <div class="waste-col" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-        <div>
-          <div class="waste-pct" style="color:${wasteColor(item.waste)};">${item.waste.toFixed(1)}% waste</div>
-          <div class="waste-bar-bg"><div class="waste-bar-fill" style="width:${Math.min(item.waste,100).toFixed(1)}%;background:${wasteFill(item.waste)};"></div></div>
-        </div>
-        <button class="btn-use" id="use-btn-${item.code}" onclick="confirmUse('${item.code}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <div class="waste-bar-wrap">
+        <div class="waste-label">Waste</div>
+        <div class="waste-bar"><div class="waste-fill" style="width:${barWidth}%;background:${wasteColor};"></div></div>
+        <div class="waste-pct" style="color:${wasteColor};">${wastePct}%</div>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-green" onclick="askUseOffcut('${item.code}','${item.x} × ${item.y} cm')">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
           Use this
         </button>
       </div>
     </div>`;
   });
 
-  el.innerHTML = html;
-  syncSearchToSheet(mfr, type, thick, x, y);
+  html += '</div>';
+  resultsEl.innerHTML = html;
 }
 
 /* ═══════════════════════════════════════════════════
-   USE / CONSUME AN OFFCUT
+   USE OFFCUT
 ═══════════════════════════════════════════════════ */
-let _pendingUseCode = null;
-
-function confirmUse(code) {
-  const item = inventory.find(i => i.code === code);
-  if (!item) return;
-  _pendingUseCode = code;
-
-  const operator = document.getElementById('s-operator').value || '(not selected)';
-  const loc = item.rack ? `Rack ${item.rack}${item.slot ? ', Slot ' + item.slot : ''}` : 'Location not recorded';
-
-  // Build the confirmation popup
-  const backdrop = document.createElement('div');
-  backdrop.className = 'overlay-backdrop';
-  backdrop.id = 'use-overlay';
-  backdrop.innerHTML = `
-    <div class="overlay-box">
-      <h3>✅ Mark offcut as used?</h3>
-      <p>This will remove <strong>${code}</strong> from the available stock and delete it from the Google Sheet database. This cannot be undone.</p>
-      <div class="overlay-detail">
-        <strong>Code:</strong> ${item.code}<br>
-        <strong>Size:</strong> ${item.x} × ${item.y} cm<br>
-        <strong>Plate:</strong> ${item.mfr} ${item.type} ${item.thick} mm<br>
-        <strong>Condition:</strong> ${item.cond}<br>
-        <strong>Location:</strong> ${loc}<br>
-        <strong>Used by:</strong> ${operator}
-      </div>
-      <div class="overlay-actions">
-        <button class="btn btn-outline" onclick="closeUseOverlay()">Cancel</button>
-        <button class="btn btn-primary" style="background:#1a6b2f;" id="confirm-use-btn" onclick="doUseOffcut()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
-          Yes, mark as used
-        </button>
-      </div>
-      <div id="overlay-msg" style="margin-top:10px;"></div>
-    </div>`;
-  document.body.appendChild(backdrop);
+function askUseOffcut(code, dims) {
+  pendingUseCode = code;
+  document.getElementById('use-overlay-msg').textContent =
+    `Mark offcut ${code} (${dims}) as used? It will be removed from available stock and the Google Sheet will be updated.`;
+  document.getElementById('use-overlay').style.display = 'flex';
 }
 
 function closeUseOverlay() {
-  const el = document.getElementById('use-overlay');
-  if (el) el.remove();
-  _pendingUseCode = null;
+  document.getElementById('use-overlay').style.display = 'none';
+  pendingUseCode = null;
 }
 
-async function doUseOffcut() {
-  const code = _pendingUseCode;
-  if (!code) return;
+async function confirmUse() {
+  if (!pendingUseCode) return;
+  const code = pendingUseCode;
+  const btn  = document.getElementById('use-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Updating…';
 
-  const itemIndex = inventory.findIndex(i => i.code === code);
-  if (itemIndex === -1) return;
-  const item = inventory[itemIndex];
+  // Remove from local inventory
+  inventory = inventory.filter(i => i.code !== code);
 
-  const confirmBtn = document.getElementById('confirm-use-btn');
-  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.innerHTML = '<span class="spinner"></span> Processing...'; }
-
-  // Move to Google Sheets USED tab and delete from INVENTORY
-  const synced = await moveToUsedSheet(code);
-
-  // Remove from local inventory array entirely
-  inventory.splice(itemIndex, 1);
-
-  // Remove the card from the DOM completely
-  const card = document.querySelector(`[id="use-btn-${code}"]`)?.closest('.result-card');
+  // Grey out the card immediately
+  const card = document.getElementById('result-card-' + code);
   if (card) {
-    card.style.transition = 'opacity 0.3s, transform 0.3s';
-    card.style.opacity = '0';
-    card.style.transform = 'translateX(20px)';
-    setTimeout(() => card.remove(), 300);
+    card.classList.add('used-card');
+    card.querySelector('.btn-green').textContent = 'Used ✓';
   }
 
   closeUseOverlay();
 
-  // Show a confirmation message in the search results area
+  // Sync to sheet
+  const synced = await moveToUsedSheet(code);
+
+  // Show feedback below search results
   const resultsEl = document.getElementById('search-results');
   const msgDiv = document.createElement('div');
-  msgDiv.style.marginBottom = '12px';
   if (synced) {
     msgDiv.className = 'msg msg-success';
-    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> removed from inventory and moved to the USED tab in Google Sheets.</span>`;
+    msgDiv.innerHTML = `<strong>${code}</strong> marked as used and removed from Google Sheets.`;
   } else {
     msgDiv.className = 'msg msg-warning';
-    msgDiv.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg><span><strong>${code}</strong> removed from the tool's inventory. Google Sheets sync not connected — update manually if needed.</span>`;
+    msgDiv.innerHTML = `<strong>${code}</strong> removed locally. Google Sheets sync not connected — update manually if needed.`;
   }
   resultsEl.insertBefore(msgDiv, resultsEl.firstChild);
   setTimeout(() => msgDiv.remove(), 7000);
-}
 
-async function moveToUsedSheet(code) {
-  setSyncBadge('syncing', 'Updating sheet...');
-  try {
-    const resp = await fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'use', code, usedDate: getToday() })
-    });
-    const data = await resp.json();
-    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Moved to USED' : (data.error || 'Sync failed'));
-    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
-    return data.ok;
-  } catch(e) {
-    setSyncBadge('error', 'Offline');
-    console.error('Sheets sync error:', e);
-    return false;
-  }
+  btn.disabled = false;
+  btn.textContent = 'Yes, mark as used';
 }
 
 /* ═══════════════════════════════════════════════════
    ADD TO STOCK
 ═══════════════════════════════════════════════════ */
 async function doAdd() {
-  const operator  = document.getElementById('a-operator').value;
-  const mfr       = document.getElementById('a-mfr').value;
-  const type      = document.getElementById('a-type').value;
-  const thick     = document.getElementById('a-thick').value;
-  const x         = parseFloat(document.getElementById('a-x').value);
-  const y         = parseFloat(document.getElementById('a-y').value);
-  const cond      = document.getElementById('a-cond').value;
-  const rack      = document.getElementById('a-rack').value.trim();
-  const slot      = document.getElementById('a-slot').value.trim();
-  const comments  = document.getElementById('a-comments').value.trim();
+  const operator = document.getElementById('a-operator').value;
+  const mfr      = document.getElementById('a-mfr').value;
+  const type     = document.getElementById('a-type').value;
+  const thick    = document.getElementById('a-thick').value;
+  const xRaw     = parseFloat(document.getElementById('a-x').value);
+  const yRaw     = parseFloat(document.getElementById('a-y').value);
+  const cond     = document.getElementById('a-cond').value;
+  const rack     = document.getElementById('a-rack').value.trim();
+  const slot     = document.getElementById('a-slot').value.trim();
+  const comments = document.getElementById('a-comments').value.trim();
 
-  if (!operator)         { showMsg('add-msg','error','Please select your name.'); return; }
-  if (!mfr||!type||!thick) { showMsg('add-msg','error','Please select manufacturer, plate type and thickness.'); return; }
-  if (!x||!y||x<=0||y<=0) { showMsg('add-msg','error','Please enter valid X and Y sizes greater than zero.'); return; }
+  if (!operator) { showMsg('add-msg','error','Please select an operator.'); return; }
+  if (!mfr || !type || !thick) { showMsg('add-msg','error','Please select manufacturer, plate type and thickness.'); return; }
+  if (!xRaw || !yRaw || xRaw <= 0 || yRaw <= 0) { showMsg('add-msg','error','Please enter valid X and Y sizes greater than zero.'); return; }
 
   const btn = document.getElementById('add-btn');
   btn.disabled = true;
 
-  // Always store larger dimension as X for consistency
-  const normX = Math.max(x, y);
-  const normY = Math.min(x, y);
+  // Normalise dimensions
+  const x = Math.max(xRaw, yRaw);
+  const y = Math.min(xRaw, yRaw);
 
-  const code  = nextCode(mfr);
+  const code  = nextCode();
   const today = getToday();
-  const area  = x * y;
-  const item  = { code, date:today, by:operator, mfr, type, thick, x:normX, y:normY, cond, rack, slot, status:'Available', comments };
+  const area  = parseFloat((x * y).toFixed(2));
+  const thickNum = parseFloat(thick);
+
+  const item = { code, date:today, by:operator, mfr, type, thick:String(thickNum), x, y, cond, rack, slot, status:'Available', comments };
   inventory.push(item);
 
-  showMsg('add-msg','info','<span class="spinner"></span> Adding to stock and syncing to Google Sheets...');
+  showMsg('add-msg','info','<span style="display:inline-flex;align-items:center;gap:6px;"><span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Adding to stock and syncing…</span>');
 
   const synced = await syncAddToSheet(item, area);
 
   if (synced) {
-    showMsg('add-msg','success',`
-      <div style="font-size:15px;margin-bottom:4px;">✅ Offcut added to stock!</div>
-      <div>Assigned code: <strong style="font-size:17px;letter-spacing:-0.01em;">${code}</strong></div>
-      <div style="margin-top:4px;font-size:12px;opacity:0.85;">${x} × ${y} cm · ${mfr} ${type} · ${cond} · synced to Google Sheets</div>
-    `);
+    showMsg('add-msg','success',`<strong>${code}</strong> added to stock (${x} × ${y} cm · ${mfr} ${type} · ${cond}) and synced to Google Sheets.`);
   } else {
-    showMsg('add-msg','warning',`
-      <div style="font-size:15px;margin-bottom:4px;">⚠️ Offcut added locally</div>
-      <div>Assigned code: <strong style="font-size:17px;">${code}</strong></div>
-      <div style="margin-top:4px;font-size:12px;opacity:0.85;">Google Sheets sync not configured — data saved here only. Go to Settings to connect.</div>
-    `);
+    showMsg('add-msg','warning',`<strong>${code}</strong> added locally. Google Sheets sync failed — check your connection.`);
   }
 
   ['a-x','a-y','a-rack','a-slot','a-comments'].forEach(id => document.getElementById(id).value = '');
@@ -1102,7 +673,6 @@ async function doAdd() {
   updateTypes('a-mfr','a-type','a-thick');
   document.getElementById('a-cond').value = 'OK';
   btn.disabled = false;
-  refreshNextCode();
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1118,15 +688,15 @@ function renderInventory() {
   if (sf) items = items.filter(i => i.status === sf);
   if (cf) items = items.filter(i => i.cond === cf);
 
-  const total   = inventory.length;
-  const avail   = inventory.filter(i=>i.status==='Available').length;
-  const needCheck = inventory.filter(i=>i.cond==='CHECK'&&i.status==='Available').length;
+  // Stats always count from full inventory (ignore filters)
+  const total     = inventory.length;
+  const avail     = inventory.filter(i => i.status === 'Available').length;
+  const needCheck = inventory.filter(i => i.cond === 'CHECK' && i.status === 'Available').length;
 
   document.getElementById('inv-stats').innerHTML = `
     <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-lbl">Total offcuts</div></div>
     <div class="stat-box"><div class="stat-num">${avail}</div><div class="stat-lbl">Available</div></div>
-    <div class="stat-box"><div class="stat-num" style="${needCheck>0?'color:#854F0B;':''}">${needCheck}</div><div class="stat-lbl">Need inspection</div></div>
-  `;
+    <div class="stat-box"><div class="stat-num" style="${needCheck>0?'color:#854F0B;':''}">${needCheck}</div><div class="stat-lbl">Need inspection</div></div>`;
 
   const body = document.getElementById('inv-body');
   if (!items.length) {
@@ -1135,140 +705,126 @@ function renderInventory() {
   }
   body.innerHTML = items.map(i => `<tr>
     <td class="code-cell">${i.code}</td>
-    <td>${i.mfr}</td>
-    <td>${i.type}</td>
-    <td>${i.thick} mm</td>
-    <td>${i.x}</td>
-    <td>${i.y}</td>
-    <td>${(i.x*i.y).toLocaleString()}</td>
+    <td>${i.mfr}</td><td>${i.type}</td><td>${i.thick} mm</td>
+    <td>${i.x}</td><td>${i.y}</td>
+    <td>${parseFloat((i.x*i.y).toFixed(2)).toLocaleString()}</td>
     <td><span class="badge ${i.cond==='OK'?'badge-ok':'badge-check'}">${i.cond}</span></td>
-    <td>${i.rack||'—'}</td>
-    <td>${i.slot||'—'}</td>
+    <td>${i.rack||'—'}</td><td>${i.slot||'—'}</td>
     <td><span class="badge ${i.status==='Available'?'badge-avail':'badge-used'}">${i.status}</span></td>
-    <td>${i.by}</td>
-    <td>${i.date}</td>
+    <td>${i.by}</td><td>${i.date}</td>
   </tr>`).join('');
 }
 
 /* ═══════════════════════════════════════════════════
-   GOOGLE SHEETS SYNC
+   GOOGLE SHEETS SYNC (via Apps Script Web App)
 ═══════════════════════════════════════════════════ */
-async function syncSearchToSheet(mfr, type, thick, x, y) {
-  setSyncBadge('syncing', 'Syncing...');
+async function syncJobInput(mfr, type, thick, x, y) {
   try {
-    const resp = await fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action:'jobinput', mfr, type, thick, x, y })
+    await fetch(WEBAPP_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({ action:'jobinput', mfr, type, thick, x, y })
     });
-    const data = await resp.json();
-    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
-    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
-  } catch(e) {
-    setSyncBadge('error', 'Offline');
-  }
+  } catch(e) { /* silent — job input sync is non-critical */ }
 }
 
 async function syncAddToSheet(item, area) {
-  setSyncBadge('syncing', 'Syncing...');
+  setSyncBadge('syncing','Syncing…');
   try {
     const resp = await fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({
-        action: 'add',
-        date: item.date, by: item.by, mfr: item.mfr, type: item.type,
-        thick: item.thick, x: item.x, y: item.y, area,
-        code: item.code, cond: item.cond, rack: item.rack,
-        slot: item.slot, comments: item.comments
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({
+        action:'add',
+        date:item.date, by:item.by, mfr:item.mfr, type:item.type,
+        thick:parseFloat(item.thick), x:item.x, y:item.y, area,
+        code:item.code, cond:item.cond, rack:item.rack, slot:item.slot, comments:item.comments
       })
     });
     const data = await resp.json();
-    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
-    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+    setSyncBadge(data.ok?'synced':'error', data.ok?'Sheet updated':'Sync failed');
+    setTimeout(() => setSyncBadge('','Connected'), 3000);
     return data.ok;
   } catch(e) {
-    setSyncBadge('error', 'Offline');
-    console.error('Sheets sync error:', e);
+    setSyncBadge('error','Offline');
     return false;
   }
 }
 
-async function testConnection() {
-  const key = document.getElementById('cfg-apikey').value.trim();
-  const sid = document.getElementById('cfg-sheetid').value.trim() || DEFAULT_SHEET_ID;
-  if (!key) { showMsg('test-result','error','Please enter an API key first.'); return; }
-  const btn = document.getElementById('test-btn');
-  btn.disabled = true;
-  showMsg('test-result','info','<span class="spinner"></span> Testing connection...');
+async function moveToUsedSheet(code) {
+  setSyncBadge('syncing','Updating sheet…');
   try {
-    const resp = await fetch(`${SHEETS_BASE}/${sid}?key=${key}&fields=properties.title`);
+    const resp = await fetch(WEBAPP_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({ action:'use', code, usedDate:getToday() })
+    });
     const data = await resp.json();
-    if (resp.ok && data.properties) {
-      showMsg('test-result','success',`Connected! Sheet found: "<strong>${data.properties.title}</strong>". Your sync is working.`);
-      CFG.apiKey = key; CFG.sheetId = sid;
-      localStorage.setItem('pf_apikey', key);
-      localStorage.setItem('pf_sheetid', sid);
-      setSyncBadge('synced','Connected');
-      updateConfigBanner();
-    } else {
-      const err = data.error ? data.error.message : 'Unknown error';
-      showMsg('test-result','error',`Connection failed: ${err}. Double-check your API key and that the sheet is shared correctly.`);
-    }
+    setSyncBadge(data.ok?'synced':'error', data.ok?'Moved to USED':(data.error||'Sync failed'));
+    setTimeout(() => setSyncBadge('','Connected'), 3000);
+    return data.ok;
   } catch(e) {
-    showMsg('test-result','error','Could not reach Google — check your internet connection.');
+    setSyncBadge('error','Offline');
+    return false;
   }
-  btn.disabled = false;
 }
 
 /* ═══════════════════════════════════════════════════
-   INIT
+   LOAD INVENTORY FROM GOOGLE SHEETS
 ═══════════════════════════════════════════════════ */
-function refreshNextCode() {
-  const el = document.getElementById('next-code-preview');
-  if (!el) return;
-  const mfr = document.getElementById('a-mfr') ? document.getElementById('a-mfr').value : '';
-  if (mfr) {
-    el.textContent = nextCode(mfr);
-  } else {
-    el.textContent = '(select manufacturer first)';
-    el.style.fontWeight = 'normal';
-    el.style.fontStyle = 'italic';
-    return;
-  }
-  el.style.fontWeight = '700';
-  el.style.fontStyle = 'normal';
-}
-
 async function loadInventoryFromSheet() {
   try {
     const resp = await fetch(WEBAPP_URL);
     const data = await resp.json();
     if (data.ok && Array.isArray(data.inventory)) {
-      // Normalise: ensure x is always the larger dimension
       inventory = data.inventory.map(i => {
+        // *** FIX: trim all string fields so trailing spaces don't break counts ***
+        const status = String(i.status || 'Available').trim();
+        const cond   = String(i.cond   || 'OK').trim();
         const x = parseFloat(i.x) || 0;
         const y = parseFloat(i.y) || 0;
-        return { ...i, x: Math.max(x,y), y: Math.min(x,y), thick: String(i.thick) };
+        return {
+          ...i,
+          code:     String(i.code  || '').trim(),
+          mfr:      String(i.mfr   || '').trim(),
+          type:     String(i.type  || '').trim(),
+          thick:    String(i.thick || '').trim(),
+          by:       String(i.by    || '').trim(),
+          rack:     String(i.rack  || '').trim(),
+          slot:     String(i.slot  || '').trim(),
+          comments: String(i.comments || '').trim(),
+          status,
+          cond,
+          x: Math.max(x, y),
+          y: Math.min(x, y)
+        };
       });
-      console.log(`Loaded ${inventory.length} items from Google Sheets`);
       return true;
-    } else {
-      console.warn('Unexpected response from sheet:', data);
-      return false;
     }
+    return false;
   } catch(e) {
     console.error('Failed to load inventory:', e);
     return false;
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   SETTINGS
+═══════════════════════════════════════════════════ */
+function saveWebAppUrl() {
+  const val = document.getElementById('cfg-webapp').value.trim();
+  if (val) {
+    showMsg('test-result','success','URL saved. Reload the page to reconnect.');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════ */
 async function init() {
   populateAllMfrs();
-  updateConfigBanner();
-  document.getElementById('cfg-apikey').value = CFG.apiKey;
+  document.getElementById('cfg-webapp').value = WEBAPP_URL;
 
-  // Fetch live inventory from Google Sheets
   const loaded = await loadInventoryFromSheet();
 
   // Hide loading overlay
@@ -1276,22 +832,17 @@ async function init() {
   if (overlay) overlay.remove();
 
   if (loaded) {
-    setSyncBadge('synced', 'Inventory loaded');
-    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+    setSyncBadge('synced','Connected');
+    setTimeout(() => setSyncBadge('','Connected'), 2000);
   } else {
-    setSyncBadge('error', 'Load failed — check connection');
-    // Show a warning banner
+    setSyncBadge('error','Load failed');
     const banner = document.getElementById('config-banner');
-    if (banner) {
-      banner.style.display = 'flex';
-      banner.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <div><strong>Could not load inventory from Google Sheets.</strong> Check your internet connection and try refreshing the page.</div>`;
-    }
+    banner.style.display = 'flex';
   }
 
-  refreshNextCode();
   renderInventory();
 }
+
 init();
 </script>
 </body>
