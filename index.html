@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polyflex Offcut Optimizer</title>
+<style>
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --surface2: #f9f8f6;
+    --border: #e2dfd8;
+    --border2: #ccc9c0;
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #9c9a94;
+    --accent: #1a1916;
+    --green-bg: #eaf3de;
+    --green-text: #27500a;
+    --amber-bg: #faeeda;
+    --amber-text: #633806;
+    --red-bg: #fcebeb;
+    --red-text: #791f1f;
+    --blue-bg: #e6f1fb;
+    --blue-text: #0c447c;
+    --teal-bg: #e1f5ee;
+    --teal-text: #085041;
+    --gold: #c9a84c;
+    --silver: #9ca3af;
+    --bronze: #b87333;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--text);
+    color: #fff;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 30px; height: 30px;
+    background: var(--gold);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 16px; height: 16px; fill: #1a1916; }
+  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .logo-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 1px; }
+  #sync-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.3s;
+  }
+  #sync-badge.syncing { background: rgba(201,168,76,0.2); color: var(--gold); }
+  #sync-badge.synced  { background: rgba(100,200,100,0.15); color: #7ecb7e; }
+  #sync-badge.error   { background: rgba(220,80,80,0.15); color: #f08080; }
+
+  /* ── Layout ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* ── Tabs ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .tab {
+    flex: 1;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .tab svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .tab:hover { background: var(--bg); color: var(--text); }
+  .tab.active { background: var(--text); color: #fff; box-shadow: var(--shadow); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text3);
+    margin-bottom: 16px;
+  }
+
+  /* ── Forms ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  .form-group.span2 { grid-column: span 2; }
+
+  select, input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6860' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+  select:focus, input:focus { outline: none; border-color: var(--text); box-shadow: 0 0 0 3px rgba(26,25,22,0.08); }
+  select:disabled, input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    font-size: 14px; font-weight: 500; font-family: inherit;
+    border-radius: var(--radius-sm);
+    border: none; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-primary { background: var(--text); color: #fff; }
+  .btn-primary:hover { background: #333; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+  .btn-outline:hover { background: var(--bg); }
+
+  /* ── Messages ── */
+  .msg {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .msg svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+  .msg-success { background: var(--green-bg); color: var(--green-text); }
+  .msg-error   { background: var(--red-bg);   color: var(--red-text); }
+  .msg-info    { background: var(--blue-bg);  color: var(--blue-text); }
+  .msg-warning { background: var(--amber-bg); color: var(--amber-text); }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge-ok     { background: var(--green-bg); color: var(--green-text); }
+  .badge-check  { background: var(--amber-bg); color: var(--amber-text); }
+  .badge-avail  { background: var(--teal-bg);  color: var(--teal-text); }
+  .badge-used   { background: var(--red-bg);   color: var(--red-text); }
+
+  /* ── Search results ── */
+  .results-header {
+    font-size: 12px; color: var(--text2);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.15s;
+  }
+  .result-card:hover { box-shadow: var(--shadow-md); }
+  .result-card.best { border-color: var(--gold); }
+
+  .rank-badge {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; flex-shrink: 0;
+  }
+  .rank-1 { background: #fef3c7; color: #78350f; border: 2px solid var(--gold); }
+  .rank-2 { background: #f3f4f6; color: #374151; border: 2px solid var(--silver); }
+  .rank-3 { background: #fef0e6; color: #7c2d12; border: 2px solid var(--bronze); }
+  .rank-n { background: var(--bg); color: var(--text2); border: 1px solid var(--border); }
+
+  .result-main { flex: 1; min-width: 0; }
+  .result-code { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .result-meta { font-size: 12px; color: var(--text2); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .meta-dot { color: var(--border2); }
+
+  .waste-col { text-align: right; flex-shrink: 0; min-width: 110px; }
+  .waste-pct { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+  .waste-bar-bg { height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .waste-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+
+  /* ── Inventory table ── */
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--surface2); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  td.code-cell { font-weight: 600; font-size: 14px; }
+
+  /* ── Stats ── */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; text-align: center; box-shadow: var(--shadow); }
+  .stat-num { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+  .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ── Filter row ── */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-row input { flex: 1; min-width: 160px; }
+  .filter-row select { width: auto; min-width: 130px; }
+
+  /* ── Empty states ── */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius);
+    color: var(--text2);
+  }
+  .empty-state svg { width: 36px; height: 36px; margin-bottom: 10px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; }
+  .empty-state small { font-size: 12px; color: var(--text3); }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Config banner ── */
+  .config-banner {
+    background: var(--amber-bg);
+    border: 1px solid #f0c060;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--amber-text);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .config-banner svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── Setup section ── */
+  .setup-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .setup-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .setup-card p { font-size: 13px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
+  .api-input-row { display: flex; gap: 8px; }
+  .api-input-row input { flex: 1; font-family: monospace; font-size: 13px; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .form-grid, .form-grid-3 { grid-template-columns: 1fr; }
+    .form-group.span2 { grid-column: span 1; }
+    .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .stat-num { font-size: 20px; }
+    header { padding: 0 14px; }
+    .container { padding: 16px 12px 60px; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    header { position: static; }
+    .tabs, .btn, .filter-row, .config-banner { display: none !important; }
+    .panel { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 9h11v4H3zM3 15h7v4H3z"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">Offcut Optimizer</div>
+      <div class="logo-sub">Polyflex plate stock</div>
+    </div>
+  </div>
+  <div id="sync-badge">
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+    <span id="sync-text">Not connected</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- API Key setup banner — shown until configured -->
+  <div class="config-banner" id="config-banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div>
+      <strong>Connected to Google Sheets.</strong> This tool syncs automatically with your spreadsheet.
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" role="tablist">
+    <button class="tab active" onclick="showTab('search')" role="tab" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Find offcut
+    </button>
+    <button class="tab" onclick="showTab('add')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add to stock
+    </button>
+    <button class="tab" onclick="showTab('inventory')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Inventory
+    </button>
+    <button class="tab" onclick="showTab('damage')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Damage Report
+    </button>
+    <button class="tab" onclick="showTab('settings')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      Settings
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       TAB 1 — FIND OFFCUT
+  ═══════════════════════════════════ -->
+  <div id="tab-search" class="panel active">
+
+    <div class="card">
+      <div class="card-title">Job requirements</div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Operator</label>
+          <select id="s-operator">
+            <option value="">Select your name...</option>
+            <option>Lonwabo</option>
+            <option>Zing</option>
+            <option>Siya</option>
+            <option>Tashreeq</option>
+            <option>Imraan</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Manufacturer</label>
+          <select id="s-mfr" onchange="updateTypes('s-mfr','s-type','s-thick')">
+            <option value="">Select manufacturer...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Plate type</label>
+          <select id="s-type" onchange="updateThick('s-mfr','s-type','s-thick')" disabled>
+            <option value="">Select type...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Thickness (mm)</label>
+          <select id="s-thick" disabled>
+            <option value="">Select thickness...</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Width needed — X (cm)</label>
+          <input type="number" id="s-x" placeholder="e.g. 50" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Height needed — Y (cm)</label>
+          <input type="number" id="s-y" placeholder="e.g. 52" min="1" step="1">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doSearch()" id="search-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Find best offcuts
+      </button>
+    </div>
+
+    <div id="search-results"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       TAB 2 — ADD TO STOCK
+  ═══════════════════════════════════ -->
+  <div id="tab-add" class="panel">
+
+    <div class="card">
+      <div class="card-title">New offcut details</div>
+      <div id="next-code-preview" style="display:none;background:#085041;color:#fff;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-weight:600;font-size:0.95rem;"></div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Operator (your name)</label>
+          <select id="a-operator">
+            <option value="">Select your name...</option>
+            <option>Lonwabo</option>
+            <option>Zing</option>
+            <option>Siya</option>
+            <option>Tashreeq</option>
+            <option>Imraan</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Manufacturer</label>
+          <select id="a-mfr" onchange="updateTypes('a-mfr','a-type','a-thick'); refreshCodePreview()">
+            <option value="">Select manufacturer...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Plate type</label>
+          <select id="a-type" onchange="updateThick('a-mfr','a-type','a-thick')" disabled>
+            <option value="">Select type...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Thickness (mm)</label>
+          <select id="a-thick" disabled>
+            <option value="">Select thickness...</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Width — X (cm)</label>
+          <input type="number" id="a-x" placeholder="e.g. 150" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Height — Y (cm)</label>
+          <input type="number" id="a-y" placeholder="e.g. 120" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Plate condition</label>
+          <select id="a-cond">
+            <option value="OK">OK — good condition</option>
+            <option value="CHECK">CHECK — needs inspection</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Storage rack (optional)</label>
+          <input type="text" id="a-rack" placeholder="e.g. A">
+        </div>
+        <div class="form-group">
+          <label>Storage slot (optional)</label>
+          <input type="text" id="a-slot" placeholder="e.g. 4">
+        </div>
+        <div class="form-group span2">
+          <label>Comments (optional)</label>
+          <input type="text" id="a-comments" placeholder="Any notes about this offcut...">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doAdd()" id="add-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to stock
+      </button>
+    </div>
+
+    <div id="add-msg"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       TAB 3 — INVENTORY
+  ═══════════════════════════════════ -->
+  <div id="tab-inventory" class="panel">
+    <div class="stats-row" id="inv-stats"></div>
+    <div class="filter-row">
+      <input type="text" id="inv-search" placeholder="Search by code, manufacturer, type, operator..." oninput="renderInventory()">
+      <select id="inv-status" onchange="renderInventory()">
+        <option value="">All status</option>
+        <option value="Available">Available</option>
+        <option value="Used">Used</option>
+      </select>
+      <select id="inv-cond" onchange="renderInventory()">
+        <option value="">All condition</option>
+        <option value="OK">OK only</option>
+        <option value="CHECK">CHECK only</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Manufacturer</th>
+            <th>Type</th>
+            <th>Thick</th>
+            <th>X cm</th>
+            <th>Y cm</th>
+            <th>Area cm²</th>
+            <th>Condition</th>
+            <th>Rack</th>
+            <th>Slot</th>
+            <th>Status</th>
+            <th>Logged by</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="inv-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       TAB 5 — DAMAGE REPORT
+  ═══════════════════════════════════ -->
+  <div id="tab-damage" class="panel">
+
+    <div class="card">
+      <div class="card-title">Log a damaged plate</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+        Use this form to record any plate that has been damaged. This information is for reference only — it does <strong>not</strong> affect the offcut inventory.
+      </p>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Person reporting (your name)</label>
+          <select id="d-operator">
+            <option value="">Select your name...</option>
+            <option>Lonwabo</option>
+            <option>Zing</option>
+            <option>Siya</option>
+            <option>Tashreeq</option>
+            <option>Imraan</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Manufacturer</label>
+          <select id="d-mfr" onchange="updateTypes('d-mfr','d-type','d-thick')">
+            <option value="">Select manufacturer...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Plate type</label>
+          <select id="d-type" onchange="updateThick('d-mfr','d-type','d-thick')" disabled>
+            <option value="">Select type...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Thickness (mm)</label>
+          <select id="d-thick" disabled>
+            <option value="">Select thickness...</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Width — X (cm)</label>
+          <input type="number" id="d-x" placeholder="e.g. 80" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Height — Y (cm)</label>
+          <input type="number" id="d-y" placeholder="e.g. 60" min="1" step="1">
+        </div>
+        <div class="form-group span2">
+          <label>Cause of damage</label>
+          <input type="text" id="d-cause" placeholder="Describe what caused the damage...">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doDamageReport()" id="damage-btn" style="background:#791f1f;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Submit damage report
+      </button>
+    </div>
+
+    <div id="damage-msg"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       TAB 4 — SETTINGS
+  ═══════════════════════════════════ -->
+  <div id="tab-settings" class="panel">
+
+    <div class="setup-card">
+      <h3>Connection test</h3>
+      <p>Click below to verify the tool is connected to Google Sheets correctly.</p>
+      <button class="btn btn-outline" onclick="testConnection()" id="test-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 2v6h-6M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+        Test connection
+      </button>
+      <div id="test-result" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="setup-card">
+      <h3>About this tool</h3>
+      <p>Polyflex Offcut Optimizer — version 1.0<br>
+      Designed for semi-skilled operators to manage plate offcut stock without direct spreadsheet access.<br><br>
+      All searches and stock additions are automatically synced to Google Sheets in real time.</p>
+    </div>
+
+  </div>
+
+</div><!-- /container -->
+
+<script>
+/* ═══════════════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════════════ */
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx36x2daA6OA4OZo5Gwn9ZylVmn6GvpqYR3CFTQY_E7Y_2_gZj5cnWEzfEUhzgBb7ID/exec';
+
+function updateConfigBanner() {
+  document.getElementById('config-banner').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════════════
+   PLATE TYPE REFERENCE DATA
+═══════════════════════════════════════════════════ */
+const PLATE_TYPES = [
+  { mfr:'XSYS',      type:'FTFD', thick:'1.14' },
+  { mfr:'XSYS',      type:'FTFD', thick:'1.7'  },
+  { mfr:'XSYS',      type:'FTFD', thick:'2.54' },
+  { mfr:'XSYS',      type:'FTFD', thick:'2.84' },
+  { mfr:'XSYS',      type:'ACT',  thick:'1.14' },
+  { mfr:'XSYS',      type:'ACT',  thick:'1.7'  },
+  { mfr:'XSYS',      type:'ACT',  thick:'2.54' },
+  { mfr:'XSYS',      type:'ACT',  thick:'2.84' },
+  { mfr:'XSYS',      type:'FACF', thick:'4.7'  },
+  { mfr:'DuPont',    type:'EPC',  thick:'3.18' },
+  { mfr:'DuPont',    type:'ESXR', thick:'1.14' },
+  { mfr:'DuPont',    type:'ESXR', thick:'1.7'  },
+  { mfr:'DuPont',    type:'ESXR', thick:'2.54' },
+  { mfr:'DuPont',    type:'ESXR', thick:'2.84' },
+  { mfr:'DuPont',    type:'ESER', thick:'1.14' },
+  { mfr:'DuPont',    type:'ESER', thick:'1.7'  },
+  { mfr:'DuPont',    type:'ESER', thick:'2.54' },
+  { mfr:'DuPont',    type:'ESER', thick:'2.84' },
+  { mfr:'McDermid',  type:'ITP',  thick:'1.14' },
+  { mfr:'McDermid',  type:'ITP',  thick:'1.7'  },
+  { mfr:'McDermid',  type:'ITP',  thick:'2.54' },
+  { mfr:'McDermid',  type:'ITP',  thick:'2.84' },
+  { mfr:'Polyflex',  type:'DR',   thick:'3.18' },
+];
+
+function getMfrs()          { return [...new Set(PLATE_TYPES.map(p=>p.mfr))]; }
+function getTypes(mfr)      { return [...new Set(PLATE_TYPES.filter(p=>p.mfr===mfr).map(p=>p.type))]; }
+function getThicks(mfr,typ) { return [...new Set(PLATE_TYPES.filter(p=>p.mfr===mfr&&p.type===typ).map(p=>p.thick).filter(Boolean))]; }
+
+function updateTypes(mfrId, typeId, thickId) {
+  const mfr = document.getElementById(mfrId).value;
+  const tSel = document.getElementById(typeId);
+  const hSel = document.getElementById(thickId);
+  tSel.innerHTML = '<option value="">Select type...</option>';
+  hSel.innerHTML = '<option value="">Select thickness...</option>';
+  if (mfr) {
+    getTypes(mfr).forEach(t => { const o=document.createElement('option');o.value=t;o.textContent=t;tSel.appendChild(o); });
+    tSel.disabled = false;
+  } else {
+    tSel.disabled = true;
+  }
+  hSel.disabled = true;
+}
+
+function updateThick(mfrId, typeId, thickId) {
+  const mfr = document.getElementById(mfrId).value;
+  const typ = document.getElementById(typeId).value;
+  const hSel = document.getElementById(thickId);
+  hSel.innerHTML = '<option value="">Select thickness...</option>';
+  if (mfr && typ) {
+    const thicks = getThicks(mfr, typ);
+    thicks.forEach(t => { const o=document.createElement('option');o.value=t;o.textContent=t+' mm';hSel.appendChild(o); });
+    hSel.disabled = thicks.length === 0;
+    if (thicks.length === 1) { hSel.value = thicks[0]; hSel.disabled = false; }
+  } else {
+    hSel.disabled = true;
+  }
+}
+
+function populateAllMfrs() {
+  ['s-mfr','a-mfr','d-mfr'].forEach(id => {
+    const sel = document.getElementById(id);
+    getMfrs().forEach(m => { const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   INVENTORY (seed data from the actual Google Sheet)
+═══════════════════════════════════════════════════ */
+const SEED = [
+  {code:'C1',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:45,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C2',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:67,y:40,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C3',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:47,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C4',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:86,y:46,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C5',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:82,y:52,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C6',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:107,y:40,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C7',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:45,y:45,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C8',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:72,y:52,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C9',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:47,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C10',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:44,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C11',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:32,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C12',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:32,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C13',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:32,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C14',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:48,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C15',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C16',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C17',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:65,y:46,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C18',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:80,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C19',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:25,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C20',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:31,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C21',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:44,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C22',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:54,y:44,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C23',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:95,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C24',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:107,y:80,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C25',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:31,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C26',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:152,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C27',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:106,y:25,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C28',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C29',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:56,y:49,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C30',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:76,y:27,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C31',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:76,y:41,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C32',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:62,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C33',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:80,y:47,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C34',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:46,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C35',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:97,y:30,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C36',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:53,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C37',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:58,y:57,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C38',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:127,y:38,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C39',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:46,y:80,cond:'OK',rack:'A',slot:'4',status:'Available',comments:''},
+  {code:'C40',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:58,y:48,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C41',date:'18/05/2026',by:'DarrYn',mfr:'XSYS',type:'FTFD',thick:'1.14',x:51,y:55,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C42',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:29,y:106,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C43',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:51,y:88,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C44',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:50,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C45',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:29,y:50,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C46',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:30,y:47,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C47',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:24,y:107,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C48',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:47,y:88,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C49',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:41,y:72,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C50',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:55,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C51',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:39,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C52',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:52,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C53',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'1.14',x:42,y:41,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C54',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:34,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C55',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:27,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C56',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:30,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C57',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:43,y:85,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C58',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:50,y:67,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C59',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:30,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C60',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:30,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C61',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:32,y:56,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C62',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:39,y:152,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C63',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:43,y:152,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C64',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:45,y:39,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C65',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:36,y:60,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C66',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:35,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C67',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:39,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C68',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:43,y:152,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C69',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:62,y:93,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C70',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:34,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C71',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:58,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C72',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:68,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C73',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:29,y:78,cond:'CHECK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'C74',date:'18/05/2026',by:'Zing',mfr:'XSYS',type:'ACT',thick:'2.54',x:56,y:39,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A1',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:52,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A2',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:53,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A3',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:100,y:52,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A4',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:56,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A5',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:107,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A6',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:47,y:76,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A7',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:51,y:42,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A8',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:54,y:67,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A9',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:40,y:88,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A10',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:52,y:69,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A11',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:52,y:96,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A12',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:106,y:45,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A13',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:45,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A14',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:45,y:106,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A15',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:29,y:87,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A16',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:29,y:70,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A17',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:128,y:33,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A18',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:57,y:53,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A19',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:58,y:51,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A20',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:48,y:80,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A21',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:42,y:134,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A22',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:32,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A23',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:40,y:86,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A24',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'EPC',thick:'3.18',x:47,y:86,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A25',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.14',x:41,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A26',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.14',x:41,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A27',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.14',x:62,y:64,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A28',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'2.84',x:127,y:151,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A29',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.7',x:127,y:127,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A30',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.7',x:40,y:203,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+  {code:'A31',date:'18/05/2026',by:'Zing',mfr:'DuPont',type:'ESXR',thick:'1.7',x:40,y:203,cond:'OK',rack:'',slot:'',status:'Available',comments:''},
+];
+
+let inventory = JSON.parse(JSON.stringify(SEED));
+
+/* ═══════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════ */
+function getToday() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+const MFR_PREFIX = { 'DuPont':'A', 'MacDermid':'B', 'XSYS':'C', 'Polyflex':'D' };
+
+function nextCode(mfr) {
+  const prefix = MFR_PREFIX[mfr] || 'E';
+  const nums = inventory.map(i=>i.code).filter(c=>c.startsWith(prefix)).map(c=>parseInt(c.slice(1))).filter(n=>!isNaN(n));
+  return prefix + ((nums.length ? Math.max(...nums) : 0) + 1);
+}
+
+function refreshCodePreview() {
+  const mfr = document.getElementById('a-mfr').value;
+  const el  = document.getElementById('next-code-preview');
+  if (!el) return;
+  if (mfr) {
+    el.textContent = 'This plate will be assigned code: ' + nextCode(mfr);
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function setSyncBadge(state, text) {
+  const el = document.getElementById('sync-badge');
+  el.className = state;
+  document.getElementById('sync-text').textContent = text;
+}
+
+function showMsg(containerId, type, text) {
+  const icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  };
+  document.getElementById(containerId).innerHTML =
+    `<div class="msg msg-${type}">${icons[type]}<span>${text}</span></div>`;
+}
+
+/* ═══════════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════════ */
+const TAB_IDS = ['search','add','inventory','damage','settings'];
+function showTab(name) {
+  TAB_IDS.forEach((t,i) => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===name);
+    document.querySelectorAll('.tab')[i].classList.toggle('active', t===name);
+  });
+  if (name === 'inventory') renderInventory();
+
+}
+
+/* ═══════════════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════════════ */
+function doSearch() {
+  const operator = document.getElementById('s-operator').value;
+  const mfr      = document.getElementById('s-mfr').value;
+  const type     = document.getElementById('s-type').value;
+  const thick    = document.getElementById('s-thick').value;
+  const x        = parseFloat(document.getElementById('s-x').value);
+  const y        = parseFloat(document.getElementById('s-y').value);
+  const el       = document.getElementById('search-results');
+
+  if (!operator) { showMsg('search-results','error','Please select your name before searching.'); return; }
+  if (!mfr || !type || !thick) { showMsg('search-results','error','Please select manufacturer, plate type and thickness.'); return; }
+  if (!x || !y || x <= 0 || y <= 0) { showMsg('search-results','error','Please enter valid X and Y sizes greater than zero.'); return; }
+
+  const needed = x * y;
+  const matches = inventory
+    .filter(i => i.mfr === mfr && i.type === type && i.thick === thick && i.status === 'Available' && i.x >= x && i.y >= y)
+    .map(i => ({ ...i, area: i.x * i.y, waste: ((i.x * i.y - needed) / (i.x * i.y)) * 100 }))
+    .sort((a,b) => a.waste - b.waste);
+
+  if (!matches.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5-2 4-2 4 2 4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      <p>No offcuts found that are big enough for <strong>${x} × ${y} mm</strong></p>
+      <small>${mfr} · ${type} · ${thick} mm — check inventory or add a new plate</small>
+    </div>`;
+    return;
+  }
+
+  const wasteColor = w => w < 20 ? '#27500a' : w < 50 ? '#633806' : '#791f1f';
+  const wasteFill  = w => w < 20 ? '#639922' : w < 50 ? '#c9a84c' : '#e24b4a';
+
+  let html = `<div class="results-header">
+    <strong>${matches.length}</strong> offcut${matches.length!==1?'s':''} found · sorted by least waste · searched by <strong>${operator}</strong>
+  </div>`;
+
+  matches.forEach((item, i) => {
+    const rank = i + 1;
+    const rankClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
+    const loc = item.rack ? `Rack ${item.rack}${item.slot ? ', Slot '+item.slot : ''}` : 'Location not recorded';
+    html += `<div class="result-card${rank===1?' best':''}">
+      <div class="rank-badge ${rankClass}">${rank}</div>
+      <div class="result-main">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="result-code">${item.code}</span>
+          <span class="badge ${item.cond==='OK'?'badge-ok':'badge-check'}">${item.cond}</span>
+          ${rank===1?'<span class="badge" style="background:#fef3c7;color:#78350f;">Best match</span>':''}
+        </div>
+        <div class="result-meta">
+          <span>${item.x} × ${item.y} mm</span>
+          <span class="meta-dot">·</span>
+          <span>${item.mfr} ${item.type} ${item.thick} mm</span>
+          <span class="meta-dot">·</span>
+          <span>${loc}</span>
+          <span class="meta-dot">·</span>
+          <span>Logged by ${item.by}</span>
+        </div>
+      </div>
+      <div class="waste-col" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="waste-pct" style="color:${wasteColor(item.waste)};">${item.waste.toFixed(1)}% waste</div>
+        <div class="waste-bar-bg" style="width:110px;"><div class="waste-bar-fill" style="width:${Math.min(item.waste,100).toFixed(1)}%;background:${wasteFill(item.waste)};"></div></div>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;margin-top:4px;" onclick="useOffcut('${item.code}')">Use this offcut</button>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+  syncSearchToSheet(mfr, type, thick, x, y);
+}
+
+/* ═══════════════════════════════════════════════════
+   USE OFFCUT
+═══════════════════════════════════════════════════ */
+async function useOffcut(code) {
+  if (!confirm(`Mark offcut ${code} as used? It will be removed from available stock and moved to the USED tab in Google Sheets.`)) return;
+
+  const today = getToday();
+
+  // Remove from local inventory
+  inventory = inventory.filter(i => i.code !== code);
+  renderInventory();
+
+  // Show feedback in search results
+  showMsg('search-results', 'success', `Offcut <strong>${code}</strong> marked as used and removed from stock.`);
+
+  // Sync to Google Sheets
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'use', code, usedDate: today })
+    });
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   ADD TO STOCK
+═══════════════════════════════════════════════════ */
+async function doAdd() {
+  const operator  = document.getElementById('a-operator').value;
+  const mfr       = document.getElementById('a-mfr').value;
+  const type      = document.getElementById('a-type').value;
+  const thick     = document.getElementById('a-thick').value;
+  const x         = parseFloat(document.getElementById('a-x').value);
+  const y         = parseFloat(document.getElementById('a-y').value);
+  const cond      = document.getElementById('a-cond').value;
+  const rack      = document.getElementById('a-rack').value.trim();
+  const slot      = document.getElementById('a-slot').value.trim();
+  const comments  = document.getElementById('a-comments').value.trim();
+
+  if (!operator)         { showMsg('add-msg','error','Please select your name.'); return; }
+  if (!mfr||!type||!thick) { showMsg('add-msg','error','Please select manufacturer, plate type and thickness.'); return; }
+  if (!x||!y||x<=0||y<=0) { showMsg('add-msg','error','Please enter valid X and Y sizes greater than zero.'); return; }
+
+  const btn = document.getElementById('add-btn');
+  btn.disabled = true;
+
+  const code  = nextCode(mfr);
+  const today = getToday();
+  const area  = x * y;
+  const item  = { code, date:today, by:operator, mfr, type, thick, x, y, cond, rack, slot, status:'Available', comments };
+  inventory.push(item);
+
+  showMsg('add-msg','info','<span class="spinner"></span> Adding to stock and syncing to Google Sheets...');
+
+  const synced = await syncAddToSheet(item, area);
+
+  if (synced) {
+    showMsg('add-msg','success',`<strong>${code}</strong> added to stock (${x} × ${y} mm · ${mfr} ${type} · ${cond}) and synced to Google Sheets.`);
+  } else {
+    showMsg('add-msg','warning',`<strong>${code}</strong> added to local stock. Google Sheets sync is not configured — data saved here only. Go to Settings to connect.`);
+  }
+
+  ['a-x','a-y','a-rack','a-slot','a-comments'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('a-operator').value = '';
+  document.getElementById('a-mfr').value = '';
+  updateTypes('a-mfr','a-type','a-thick');
+  document.getElementById('a-cond').value = 'OK';
+  refreshCodePreview();
+  btn.disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════
+   INVENTORY VIEW
+═══════════════════════════════════════════════════ */
+function renderInventory() {
+  const q  = document.getElementById('inv-search').value.toLowerCase();
+  const sf = document.getElementById('inv-status').value;
+  const cf = document.getElementById('inv-cond').value;
+
+  let items = inventory;
+  if (q)  items = items.filter(i => (i.code+i.mfr+i.type+i.thick+i.by+i.rack+i.slot+i.comments).toLowerCase().includes(q));
+  if (sf) items = items.filter(i => i.status === sf);
+  if (cf) items = items.filter(i => i.cond === cf);
+
+  const total   = inventory.length;
+  const avail   = inventory.filter(i=>i.status==='Available').length;
+  const needCheck = inventory.filter(i=>i.cond==='CHECK'&&i.status==='Available').length;
+
+  document.getElementById('inv-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-lbl">Total offcuts</div></div>
+    <div class="stat-box"><div class="stat-num">${avail}</div><div class="stat-lbl">Available</div></div>
+    <div class="stat-box"><div class="stat-num" style="${needCheck>0?'color:#854F0B;':''}">${needCheck}</div><div class="stat-lbl">Need inspection</div></div>
+  `;
+
+  const body = document.getElementById('inv-body');
+  if (!items.length) {
+    body.innerHTML = `<tr><td colspan="13" style="text-align:center;padding:2rem;color:var(--text2);font-size:13px;">No offcuts match your filters</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(i => `<tr>
+    <td class="code-cell">${i.code}</td>
+    <td>${i.mfr}</td>
+    <td>${i.type}</td>
+    <td>${i.thick} mm</td>
+    <td>${i.x}</td>
+    <td>${i.y}</td>
+    <td>${(i.x*i.y).toLocaleString()}</td>
+    <td><span class="badge ${i.cond==='OK'?'badge-ok':'badge-check'}">${i.cond}</span></td>
+    <td>${i.rack||'—'}</td>
+    <td>${i.slot||'—'}</td>
+    <td><span class="badge ${i.status==='Available'?'badge-avail':'badge-used'}">${i.status}</span></td>
+    <td>${i.by}</td>
+    <td>${i.date}</td>
+  </tr>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   GOOGLE SHEETS SYNC
+═══════════════════════════════════════════════════ */
+async function syncSearchToSheet(mfr, type, thick, x, y) {
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'jobinput', mfr, type, thick, x, y })
+    });
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+  }
+}
+
+async function syncAddToSheet(item, area) {
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'add', ...item, area })
+    });
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+    return data.ok;
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+    return false;
+  }
+}
+
+async function testConnection() {
+  const btn = document.getElementById('test-btn');
+  btn.disabled = true;
+  showMsg('test-result','info','<span class="spinner"></span> Testing connection...');
+  try {
+    const resp = await fetch(WEBAPP_URL);
+    const data = await resp.json();
+    if (data.ok) {
+      showMsg('test-result','success','Connected! Google Sheets sync is working correctly.');
+      setSyncBadge('synced','Connected');
+    } else {
+      showMsg('test-result','error','Connected but received an unexpected response. Check your Apps Script.');
+    }
+  } catch(e) {
+    showMsg('test-result','error','Could not reach Google — check your internet connection.');
+  }
+  btn.disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════
+   DAMAGE REPORT
+═══════════════════════════════════════════════════ */
+async function doDamageReport() {
+  const operator = document.getElementById('d-operator').value;
+  const mfr      = document.getElementById('d-mfr').value;
+  const type     = document.getElementById('d-type').value;
+  const thick    = document.getElementById('d-thick').value;
+  const x        = parseFloat(document.getElementById('d-x').value);
+  const y        = parseFloat(document.getElementById('d-y').value);
+  const cause    = document.getElementById('d-cause').value.trim();
+
+  if (!operator)         { showMsg('damage-msg','error','Please select your name.'); return; }
+  if (!mfr||!type||!thick) { showMsg('damage-msg','error','Please select manufacturer, plate type and thickness.'); return; }
+  if (!x||!y||x<=0||y<=0) { showMsg('damage-msg','error','Please enter valid X and Y sizes greater than zero.'); return; }
+  if (!cause)            { showMsg('damage-msg','error','Please describe the cause of damage.'); return; }
+
+  const btn = document.getElementById('damage-btn');
+  btn.disabled = true;
+
+  const today = getToday();
+  showMsg('damage-msg','info','<span class="spinner"></span> Submitting damage report to Google Sheets...');
+
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'damage', date:today, by:operator, mfr, type, thick, x, y, cause })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showMsg('damage-msg','success','Damage report submitted successfully and recorded in Google Sheets.');
+      setSyncBadge('synced', 'Sheet updated');
+    } else {
+      showMsg('damage-msg','error','Report submitted but Google Sheets sync failed. Please check your connection.');
+      setSyncBadge('error', 'Sync failed');
+    }
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+  } catch(e) {
+    showMsg('damage-msg','error','Could not reach Google Sheets — check your internet connection.');
+    setSyncBadge('error', 'Offline');
+  }
+
+  // Reset form on success
+  ['d-x','d-y','d-cause'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('d-operator').value = '';
+  document.getElementById('d-mfr').value = '';
+  updateTypes('d-mfr','d-type','d-thick');
+  btn.disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════ */
+async function loadInventoryFromSheet() {
+  setSyncBadge('syncing', 'Loading inventory...');
+  try {
+    const resp = await fetch(WEBAPP_URL);
+    const data = await resp.json();
+    if (data.ok && data.inventory && data.inventory.length > 0) {
+      inventory = data.inventory.map(i => {
+        const x = parseFloat(i.x) || 0;
+        const y = parseFloat(i.y) || 0;
+        return {
+          ...i,
+          x: Math.max(x, y),
+          y: Math.min(x, y),
+          thick:  String(i.thick).trim(),
+          status: String(i.status || 'Available').trim(),
+          cond:   String(i.cond || 'OK').trim(),
+          mfr:    String(i.mfr || '').trim(),
+          type:   String(i.type || '').trim(),
+          code:   String(i.code || '').trim()
+        };
+      });
+      setSyncBadge('synced', 'Connected');
+    } else {
+      setSyncBadge('error', 'Load failed');
+    }
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+  }
+}
+
+function init() {
+  populateAllMfrs();
+  updateConfigBanner();
+  loadInventoryFromSheet();
+}
+init();
+</script>
+</body>
+</html>
