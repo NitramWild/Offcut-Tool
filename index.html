@@ -376,6 +376,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       Inventory
     </button>
+    <button class="tab" onclick="showTab('damage')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Damage Report
+    </button>
     <button class="tab" onclick="showTab('settings')" role="tab">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
       Settings
@@ -560,6 +564,70 @@
   </div>
 
   <!-- ═══════════════════════════════════
+       TAB 5 — DAMAGE REPORT
+  ═══════════════════════════════════ -->
+  <div id="tab-damage" class="panel">
+
+    <div class="card">
+      <div class="card-title">Log a damaged plate</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+        Use this form to record any plate that has been damaged. This information is for reference only — it does <strong>not</strong> affect the offcut inventory.
+      </p>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Person reporting (your name)</label>
+          <select id="d-operator">
+            <option value="">Select your name...</option>
+            <option>Lonwabo</option>
+            <option>Zing</option>
+            <option>Siya</option>
+            <option>Tashreeq</option>
+            <option>Imraan</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Manufacturer</label>
+          <select id="d-mfr" onchange="updateTypes('d-mfr','d-type','d-thick')">
+            <option value="">Select manufacturer...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Plate type</label>
+          <select id="d-type" onchange="updateThick('d-mfr','d-type','d-thick')" disabled>
+            <option value="">Select type...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Thickness (mm)</label>
+          <select id="d-thick" disabled>
+            <option value="">Select thickness...</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Width — X (cm)</label>
+          <input type="number" id="d-x" placeholder="e.g. 80" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Height — Y (cm)</label>
+          <input type="number" id="d-y" placeholder="e.g. 60" min="1" step="1">
+        </div>
+        <div class="form-group span2">
+          <label>Cause of damage</label>
+          <input type="text" id="d-cause" placeholder="Describe what caused the damage...">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doDamageReport()" id="damage-btn" style="background:#791f1f;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Submit damage report
+      </button>
+    </div>
+
+    <div id="damage-msg"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════
        TAB 4 — SETTINGS
   ═══════════════════════════════════ -->
   <div id="tab-settings" class="panel">
@@ -659,7 +727,7 @@ function updateThick(mfrId, typeId, thickId) {
 }
 
 function populateAllMfrs() {
-  ['s-mfr','a-mfr'].forEach(id => {
+  ['s-mfr','a-mfr','d-mfr'].forEach(id => {
     const sel = document.getElementById(id);
     getMfrs().forEach(m => { const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
   });
@@ -826,7 +894,7 @@ function showMsg(containerId, type, text) {
 /* ═══════════════════════════════════════════════════
    TABS
 ═══════════════════════════════════════════════════ */
-const TAB_IDS = ['search','add','inventory','settings'];
+const TAB_IDS = ['search','add','inventory','damage','settings'];
 function showTab(name) {
   TAB_IDS.forEach((t,i) => {
     document.getElementById('tab-'+t).classList.toggle('active', t===name);
@@ -1084,6 +1152,58 @@ async function testConnection() {
   } catch(e) {
     showMsg('test-result','error','Could not reach Google — check your internet connection.');
   }
+  btn.disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════
+   DAMAGE REPORT
+═══════════════════════════════════════════════════ */
+async function doDamageReport() {
+  const operator = document.getElementById('d-operator').value;
+  const mfr      = document.getElementById('d-mfr').value;
+  const type     = document.getElementById('d-type').value;
+  const thick    = document.getElementById('d-thick').value;
+  const x        = parseFloat(document.getElementById('d-x').value);
+  const y        = parseFloat(document.getElementById('d-y').value);
+  const cause    = document.getElementById('d-cause').value.trim();
+
+  if (!operator)         { showMsg('damage-msg','error','Please select your name.'); return; }
+  if (!mfr||!type||!thick) { showMsg('damage-msg','error','Please select manufacturer, plate type and thickness.'); return; }
+  if (!x||!y||x<=0||y<=0) { showMsg('damage-msg','error','Please enter valid X and Y sizes greater than zero.'); return; }
+  if (!cause)            { showMsg('damage-msg','error','Please describe the cause of damage.'); return; }
+
+  const btn = document.getElementById('damage-btn');
+  btn.disabled = true;
+
+  const today = getToday();
+  showMsg('damage-msg','info','<span class="spinner"></span> Submitting damage report to Google Sheets...');
+
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'damage', date:today, by:operator, mfr, type, thick, x, y, cause })
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showMsg('damage-msg','success','Damage report submitted successfully and recorded in Google Sheets.');
+      setSyncBadge('synced', 'Sheet updated');
+    } else {
+      showMsg('damage-msg','error','Report submitted but Google Sheets sync failed. Please check your connection.');
+      setSyncBadge('error', 'Sync failed');
+    }
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+  } catch(e) {
+    showMsg('damage-msg','error','Could not reach Google Sheets — check your internet connection.');
+    setSyncBadge('error', 'Offline');
+  }
+
+  // Reset form on success
+  ['d-x','d-y','d-cause'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('d-operator').value = '';
+  document.getElementById('d-mfr').value = '';
+  updateTypes('d-mfr','d-type','d-thick');
   btn.disabled = false;
 }
 
