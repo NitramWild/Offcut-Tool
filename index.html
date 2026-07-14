@@ -118,6 +118,32 @@
   .panel { display: none; }
   .panel.active { display: block; }
 
+  /* ── Module switch (Plate Offcuts / Mounting Back) ── */
+  .module-switch {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .module-btn {
+    flex: 1;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.15s;
+    box-shadow: var(--shadow);
+  }
+  .module-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .module-btn:hover { border-color: var(--border2); }
+  .module-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+  .module-wrap { display: none; }
+  .module-wrap.active { display: block; }
+
   /* ── Cards ── */
   .card {
     background: var(--surface);
@@ -329,7 +355,7 @@
   /* ── Print ── */
   @media print {
     header { position: static; }
-    .tabs, .btn, .filter-row, .config-banner { display: none !important; }
+    .tabs, .btn, .filter-row, .config-banner, .module-switch { display: none !important; }
     .panel { display: block !important; }
   }
 </style>
@@ -343,7 +369,7 @@
     </div>
     <div>
       <div class="logo-text">Offcut Optimizer</div>
-      <div class="logo-sub">Polyflex plate stock</div>
+      <div class="logo-sub">Plate &amp; mounting board stock</div>
     </div>
   </div>
   <div id="sync-badge">
@@ -362,8 +388,22 @@
     </div>
   </div>
 
+  <!-- Module switch -->
+  <div class="module-switch">
+    <button class="module-btn active" id="mod-btn-plate" onclick="showModule('plate')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v4H3zM3 9h11v4H3zM3 15h7v4H3z"/></svg>
+      Plate Offcuts
+    </button>
+    <button class="module-btn" id="mod-btn-mount" onclick="showModule('mount')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Mounting Back
+    </button>
+  </div>
+
+  <div id="module-plate" class="module-wrap active">
+
   <!-- Tabs -->
-  <div class="tabs" role="tablist">
+  <div class="tabs" id="tabs-plate" role="tablist">
     <button class="tab active" onclick="showTab('search')" role="tab" aria-selected="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       Find offcut
@@ -651,6 +691,154 @@
 
   </div>
 
+  </div><!-- /module-plate -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MOUNTING BACK MODULE (Probak cushioned mounting board)
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="module-mount" class="module-wrap">
+
+  <!-- Mounting Back tabs -->
+  <div class="tabs" id="tabs-mount" role="tablist">
+    <button class="tab active" onclick="showMountTab('search')" role="tab" aria-selected="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Find offcut
+    </button>
+    <button class="tab" onclick="showMountTab('add')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add to stock
+    </button>
+    <button class="tab" onclick="showMountTab('inventory')" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Inventory
+    </button>
+    <button class="tab" onclick="showModule('plate'); showTab('settings');" role="tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      Settings
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       MOUNT TAB 1 — FIND OFFCUT
+  ═══════════════════════════════════ -->
+  <div id="tab-mount-search" class="panel active">
+
+    <div class="card">
+      <div class="card-title">Job requirements</div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Operator</label>
+          <select id="ms-operator">
+            <option value="">Select your name...</option>
+            <option>Calvin</option>
+            <option>Themba</option>
+            <option>Andisa</option>
+            <option>Sean</option>
+            <option>Nizaam</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Thickness</label>
+          <select id="ms-thick">
+            <option value="">Select thickness...</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Width needed — X (cm)</label>
+          <input type="number" id="ms-x" placeholder="e.g. 100" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Height needed — Y (cm)</label>
+          <input type="number" id="ms-y" placeholder="e.g. 60" min="1" step="1">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doMountSearch()" id="mount-search-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Find best offcuts
+      </button>
+    </div>
+
+    <div id="mount-search-results"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       MOUNT TAB 2 — ADD TO STOCK
+  ═══════════════════════════════════ -->
+  <div id="tab-mount-add" class="panel">
+
+    <div class="card">
+      <div class="card-title">New mounting board offcut details</div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Operator (your name)</label>
+          <select id="ma-operator">
+            <option value="">Select your name...</option>
+            <option>Calvin</option>
+            <option>Themba</option>
+            <option>Andisa</option>
+            <option>Sean</option>
+            <option>Nizaam</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Thickness</label>
+          <select id="ma-thick">
+            <option value="">Select thickness...</option>
+          </select>
+        </div>
+        <div></div>
+        <div class="form-group">
+          <label>Width — X (cm)</label>
+          <input type="number" id="ma-x" placeholder="e.g. 150" min="1" step="1">
+        </div>
+        <div class="form-group">
+          <label>Height — Y (cm)</label>
+          <input type="number" id="ma-y" placeholder="e.g. 120" min="1" step="1">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doMountAdd()" id="mount-add-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add to stock
+      </button>
+    </div>
+
+    <div id="mount-add-msg"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       MOUNT TAB 3 — INVENTORY
+  ═══════════════════════════════════ -->
+  <div id="tab-mount-inventory" class="panel">
+    <div class="stats-row" id="minv-stats"></div>
+    <div class="filter-row">
+      <input type="text" id="minv-search" placeholder="Search by operator..." oninput="renderMountInventory()">
+      <select id="minv-thick" onchange="renderMountInventory()">
+        <option value="">All thickness</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Logged by</th>
+            <th>Manufacturer</th>
+            <th>Thickness</th>
+            <th>X cm</th>
+            <th>Y cm</th>
+            <th>Area cm²</th>
+          </tr>
+        </thead>
+        <tbody id="minv-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  </div><!-- /module-mount -->
+
 </div><!-- /container -->
 
 <script>
@@ -898,7 +1086,7 @@ const TAB_IDS = ['search','add','inventory','damage','settings'];
 function showTab(name) {
   TAB_IDS.forEach((t,i) => {
     document.getElementById('tab-'+t).classList.toggle('active', t===name);
-    document.querySelectorAll('.tab')[i].classList.toggle('active', t===name);
+    document.querySelectorAll('#tabs-plate .tab')[i].classList.toggle('active', t===name);
   });
   if (name === 'inventory') renderInventory();
 
@@ -1235,13 +1423,274 @@ async function loadInventoryFromSheet() {
     } else {
       setSyncBadge('error', 'Load failed');
     }
+    // Mounting Back stock — only present once the Apps Script backend is
+    // updated to return it. If it's missing, mountingInventory just stays
+    // empty and the module still works locally.
+    if (data.ok && data.mountingInventory && data.mountingInventory.length > 0) {
+      mountingInventory = data.mountingInventory.map(i => {
+        const x = parseFloat(i.x) || 0;
+        const y = parseFloat(i.y) || 0;
+        return {
+          _uid:  nextMountUid(),
+          date:  i.date,
+          by:    String(i.by || '').trim(),
+          mfr:   String(i.mfr || MOUNT_MFR).trim(),
+          thick: String(i.thick).trim(),
+          x: Math.max(x, y),
+          y: Math.min(x, y)
+        };
+      });
+    }
   } catch(e) {
     setSyncBadge('error', 'Offline');
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   MODULE SWITCH — Plate Offcuts vs Mounting Back
+═══════════════════════════════════════════════════ */
+function showModule(mod) {
+  document.getElementById('module-plate').classList.toggle('active', mod === 'plate');
+  document.getElementById('module-mount').classList.toggle('active', mod === 'mount');
+  document.getElementById('mod-btn-plate').classList.toggle('active', mod === 'plate');
+  document.getElementById('mod-btn-mount').classList.toggle('active', mod === 'mount');
+  if (mod === 'mount') renderMountInventory();
+}
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — REFERENCE DATA
+   Only one manufacturer (Probak), only two thicknesses.
+   Kept deliberately minimal: Date, Logged By, Manufacturer,
+   Thickness, X, Y — nothing else is tracked for this module.
+═══════════════════════════════════════════════════ */
+const MOUNT_MFR = 'Probak';
+const MOUNT_THICKNESSES = ['100', '160']; // thou
+
+function populateMountThick() {
+  ['ms-thick', 'ma-thick'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select thickness...</option>';
+    MOUNT_THICKNESSES.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t + ' thou';
+      sel.appendChild(o);
+    });
+  });
+  const filterSel = document.getElementById('minv-thick');
+  filterSel.innerHTML = '<option value="">All thickness</option>';
+  MOUNT_THICKNESSES.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t;
+    o.textContent = t + ' thou';
+    filterSel.appendChild(o);
+  });
+}
+
+// mountingInventory items look like: { _uid, date, by, mfr, thick, x, y }
+// _uid is a browser-only reference number (never sent to the sheet) so the
+// "Use this offcut" button can identify which row to remove — since there's
+// no Code column in this module, we don't have any other unique handle.
+let mountingInventory = [];
+let mountUidCounter = 1;
+function nextMountUid() { return mountUidCounter++; }
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — TABS
+═══════════════════════════════════════════════════ */
+const MOUNT_TAB_IDS = ['search', 'add', 'inventory'];
+function showMountTab(name) {
+  MOUNT_TAB_IDS.forEach((t, i) => {
+    document.getElementById('tab-mount-' + t).classList.toggle('active', t === name);
+    document.querySelectorAll('#tabs-mount .tab')[i].classList.toggle('active', t === name);
+  });
+  if (name === 'inventory') renderMountInventory();
+}
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — SEARCH
+═══════════════════════════════════════════════════ */
+function doMountSearch() {
+  const operator = document.getElementById('ms-operator').value;
+  const thick    = document.getElementById('ms-thick').value;
+  const x        = parseFloat(document.getElementById('ms-x').value);
+  const y        = parseFloat(document.getElementById('ms-y').value);
+  const el       = document.getElementById('mount-search-results');
+
+  if (!operator) { showMsg('mount-search-results','error','Please select your name before searching.'); return; }
+  if (!thick)    { showMsg('mount-search-results','error','Please select a thickness.'); return; }
+  if (!x || !y || x <= 0 || y <= 0) { showMsg('mount-search-results','error','Please enter valid X and Y sizes greater than zero.'); return; }
+
+  const needed = x * y;
+  const matches = mountingInventory
+    .filter(i => i.thick === thick && i.x >= x && i.y >= y)
+    .map(i => ({ ...i, area: i.x * i.y, waste: ((i.x * i.y - needed) / (i.x * i.y)) * 100 }))
+    .sort((a,b) => a.waste - b.waste);
+
+  if (!matches.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5-2 4-2 4 2 4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      <p>No mounting board found that is big enough for <strong>${x} × ${y} cm</strong></p>
+      <small>${MOUNT_MFR} · ${thick} thou — check inventory or add new stock</small>
+    </div>`;
+    return;
+  }
+
+  const wasteColor = w => w < 20 ? '#27500a' : w < 50 ? '#633806' : '#791f1f';
+  const wasteFill  = w => w < 20 ? '#639922' : w < 50 ? '#c9a84c' : '#e24b4a';
+
+  let html = `<div class="results-header">
+    <strong>${matches.length}</strong> offcut${matches.length!==1?'s':''} found · sorted by least waste · searched by <strong>${operator}</strong>
+  </div>`;
+
+  matches.forEach((item, i) => {
+    const rank = i + 1;
+    const rankClass = rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
+    html += `<div class="result-card${rank===1?' best':''}">
+      <div class="rank-badge ${rankClass}">${rank}</div>
+      <div class="result-main">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="result-code">${MOUNT_MFR} ${item.thick} thou</span>
+          ${rank===1?'<span class="badge" style="background:#fef3c7;color:#78350f;">Best match</span>':''}
+        </div>
+        <div class="result-meta">
+          <span>${item.x} × ${item.y} cm</span>
+          <span class="meta-dot">·</span>
+          <span>Logged by ${item.by}</span>
+          <span class="meta-dot">·</span>
+          <span>${item.date}</span>
+        </div>
+      </div>
+      <div class="waste-col" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+        <div class="waste-pct" style="color:${wasteColor(item.waste)};">${item.waste.toFixed(1)}% waste</div>
+        <div class="waste-bar-bg" style="width:110px;"><div class="waste-bar-fill" style="width:${Math.min(item.waste,100).toFixed(1)}%;background:${wasteFill(item.waste)};"></div></div>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;margin-top:4px;" onclick="useMountOffcut(${item._uid})">Use this offcut</button>
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — USE OFFCUT
+═══════════════════════════════════════════════════ */
+async function useMountOffcut(uid) {
+  const item = mountingInventory.find(i => i._uid === uid);
+  if (!item) return;
+  if (!confirm(`Mark this ${item.thick} thou offcut (${item.x} × ${item.y} cm) as used? It will be removed from available stock and moved to the MOUNTING USED tab in Google Sheets.`)) return;
+
+  mountingInventory = mountingInventory.filter(i => i._uid !== uid);
+  renderMountInventory();
+
+  showMsg('mount-search-results', 'success', `Offcut marked as used and removed from stock.`);
+
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'mountUse', date: item.date, by: item.by, mfr: item.mfr, thick: item.thick, x: item.x, y: item.y })
+    });
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — ADD TO STOCK
+═══════════════════════════════════════════════════ */
+async function doMountAdd() {
+  const operator  = document.getElementById('ma-operator').value;
+  const thick     = document.getElementById('ma-thick').value;
+  const x         = parseFloat(document.getElementById('ma-x').value);
+  const y         = parseFloat(document.getElementById('ma-y').value);
+
+  if (!operator)  { showMsg('mount-add-msg','error','Please select your name.'); return; }
+  if (!thick)     { showMsg('mount-add-msg','error','Please select a thickness.'); return; }
+  if (!x||!y||x<=0||y<=0) { showMsg('mount-add-msg','error','Please enter valid X and Y sizes greater than zero.'); return; }
+
+  const btn = document.getElementById('mount-add-btn');
+  btn.disabled = true;
+
+  const today = getToday();
+  const item  = { _uid: nextMountUid(), date:today, by:operator, mfr:MOUNT_MFR, thick, x, y };
+  mountingInventory.push(item);
+
+  showMsg('mount-add-msg','info','<span class="spinner"></span> Adding to stock and syncing to Google Sheets...');
+
+  const synced = await syncMountAddToSheet(item);
+
+  if (synced) {
+    showMsg('mount-add-msg','success',`Added to stock (${x} × ${y} cm · ${MOUNT_MFR} ${thick} thou) and synced to Google Sheets.`);
+  } else {
+    showMsg('mount-add-msg','warning',`Added to local stock. Google Sheets sync is not configured — data saved here only. Go to Settings to connect.`);
+  }
+
+  ['ma-x','ma-y'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ma-operator').value = '';
+  document.getElementById('ma-thick').value = '';
+  btn.disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — INVENTORY VIEW
+═══════════════════════════════════════════════════ */
+function renderMountInventory() {
+  const q  = document.getElementById('minv-search').value.toLowerCase();
+  const tf = document.getElementById('minv-thick').value;
+
+  let items = mountingInventory;
+  if (q)  items = items.filter(i => i.by.toLowerCase().includes(q));
+  if (tf) items = items.filter(i => i.thick === tf);
+
+  document.getElementById('minv-stats').innerHTML = `
+    <div class="stat-box"><div class="stat-num">${mountingInventory.length}</div><div class="stat-lbl">Total offcuts</div></div>
+  `;
+
+  const body = document.getElementById('minv-body');
+  if (!items.length) {
+    body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text2);font-size:13px;">No offcuts match your filters</td></tr>`;
+    return;
+  }
+  body.innerHTML = items.map(i => `<tr>
+    <td>${i.date}</td>
+    <td>${i.by}</td>
+    <td>${i.mfr}</td>
+    <td>${i.thick} thou</td>
+    <td>${i.x}</td>
+    <td>${i.y}</td>
+    <td>${(i.x*i.y).toLocaleString()}</td>
+  </tr>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   MOUNTING BACK — GOOGLE SHEETS SYNC
+═══════════════════════════════════════════════════ */
+async function syncMountAddToSheet(item) {
+  setSyncBadge('syncing', 'Syncing...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'mountAdd', date:item.date, by:item.by, mfr:item.mfr, thick:item.thick, x:item.x, y:item.y })
+    });
+    const data = await resp.json();
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    setTimeout(() => setSyncBadge('', 'Connected'), 3000);
+    return data.ok;
+  } catch(e) {
+    setSyncBadge('error', 'Offline');
+    return false;
+  }
+}
+
 function init() {
   populateAllMfrs();
+  populateMountThick();
   updateConfigBanner();
   loadInventoryFromSheet();
 }
