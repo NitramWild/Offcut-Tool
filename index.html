@@ -683,6 +683,31 @@
     </div>
 
     <div class="setup-card">
+      <h3>Manage operators</h3>
+      <p>Add or remove the names available in the operator dropdowns. Changes save to Google Sheets and apply everywhere immediately.</p>
+
+      <div style="margin-top:16px;">
+        <strong style="font-size:13px;">Plate Offcuts operators</strong>
+        <div id="operator-list-plate" style="margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="new-operator-plate" placeholder="New operator name..." style="flex:1;">
+          <button class="btn btn-outline" onclick="addOperatorUI('plate')">Add</button>
+        </div>
+      </div>
+
+      <div style="margin-top:22px;">
+        <strong style="font-size:13px;">Mounting Back operators</strong>
+        <div id="operator-list-mount" style="margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <input type="text" id="new-operator-mount" placeholder="New operator name..." style="flex:1;">
+          <button class="btn btn-outline" onclick="addOperatorUI('mount')">Add</button>
+        </div>
+      </div>
+
+      <div id="operator-msg" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="setup-card">
       <h3>About this tool</h3>
       <p>Polyflex Offcut Optimizer — version 2.1<br>
       Designed for semi-skilled operators to manage plate offcut stock without direct spreadsheet access.<br><br>
@@ -847,8 +872,31 @@
 ═══════════════════════════════════════════════════ */
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxLpg8_XrbkZCtY_zI1_M-6zua89_TfwolWji0-Pxkas8NtNA0CEIkkNUYR37KG_rrW/exec';
 
-const PLATE_OPERATORS = ['Lonwabo','Zing','Siya','Tashreeq','Imraan'];
-const MOUNT_OPERATORS = ['Calvin','Themba','Andisa','Sean','Nizaam'];
+// These start as a fallback list only, used if the sheet can't be reached.
+// The real, editable list is loaded from the OPERATORS tab in Google Sheets
+// on startup, and kept in sync whenever someone is added/removed via Settings.
+let PLATE_OPERATORS = ['Lonwabo','Zing','Siya','Tashreeq','Imraan'];
+let MOUNT_OPERATORS = ['Calvin','Themba','Andisa','Sean','Nizaam'];
+
+function populateOperatorDropdowns() {
+  const plateSelects = ['s-operator','a-operator','d-operator'];
+  const mountSelects = ['ms-operator','ma-operator'];
+  plateSelects.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select your name...</option>' +
+      PLATE_OPERATORS.map(n => `<option${n===current?' selected':''}>${n}</option>`).join('');
+  });
+  mountSelects.forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select your name...</option>' +
+      MOUNT_OPERATORS.map(n => `<option${n===current?' selected':''}>${n}</option>`).join('');
+  });
+  renderOperatorManager();
+}
 let activeSearchId = '';
 
 function updateConfigBanner() {
@@ -1470,6 +1518,11 @@ async function loadInventoryFromSheet() {
         };
       });
     }
+    if (data.ok && data.operators) {
+      if (Array.isArray(data.operators.plate) && data.operators.plate.length) PLATE_OPERATORS = data.operators.plate;
+      if (Array.isArray(data.operators.mount) && data.operators.mount.length) MOUNT_OPERATORS = data.operators.mount;
+    }
+    populateOperatorDropdowns();
   } catch(e) {
     setSyncBadge('error', 'Offline');
   }
@@ -1719,9 +1772,79 @@ async function syncMountAddToSheet(item) {
   }
 }
 
+/* ═══════════════════════════════════════════════════
+   MANAGE OPERATORS (Settings tab)
+═══════════════════════════════════════════════════ */
+function renderOperatorManager() {
+  const plateEl = document.getElementById('operator-list-plate');
+  const mountEl = document.getElementById('operator-list-mount');
+  if (!plateEl || !mountEl) return; // Settings tab not in DOM yet on first call
+
+  const rowHtml = (name, module) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f9f8f6;border-radius:7px;margin-bottom:6px;">
+      <span>${name}</span>
+      <button onclick="removeOperatorUI('${name.replace(/'/g,"\\'")}','${module}')" style="background:none;border:none;color:#791f1f;cursor:pointer;font-weight:700;padding:2px 6px;" title="Remove ${name}">✕</button>
+    </div>`;
+
+  plateEl.innerHTML = PLATE_OPERATORS.map(n => rowHtml(n, 'plate')).join('') || '<div style="color:#777;font-size:13px;">No operators yet</div>';
+  mountEl.innerHTML = MOUNT_OPERATORS.map(n => rowHtml(n, 'mount')).join('') || '<div style="color:#777;font-size:13px;">No operators yet</div>';
+}
+
+async function addOperatorUI(module) {
+  const inputId = module === 'plate' ? 'new-operator-plate' : 'new-operator-mount';
+  const input = document.getElementById(inputId);
+  const name = input.value.trim();
+  if (!name) return;
+
+  const list = module === 'plate' ? PLATE_OPERATORS : MOUNT_OPERATORS;
+  if (list.some(n => n.toLowerCase() === name.toLowerCase())) {
+    showMsg('operator-msg', 'error', `${name} is already in the list.`);
+    return;
+  }
+
+  showMsg('operator-msg', 'success', 'Saving...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'addOperator', name, module })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Could not save');
+    list.push(name);
+    input.value = '';
+    populateOperatorDropdowns();
+    showMsg('operator-msg', 'success', `${name} added.`);
+  } catch(e) {
+    showMsg('operator-msg', 'error', `Could not add ${name}: ${e.message || e}`);
+  }
+}
+
+async function removeOperatorUI(name, module) {
+  if (!confirm(`Remove ${name} from the operator list? This won't change any past records already in Google Sheets.`)) return;
+
+  showMsg('operator-msg', 'success', 'Saving...');
+  try {
+    const resp = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'removeOperator', name, module })
+    });
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Could not remove');
+    if (module === 'plate') PLATE_OPERATORS = PLATE_OPERATORS.filter(n => n !== name);
+    else MOUNT_OPERATORS = MOUNT_OPERATORS.filter(n => n !== name);
+    populateOperatorDropdowns();
+    showMsg('operator-msg', 'success', `${name} removed.`);
+  } catch(e) {
+    showMsg('operator-msg', 'error', `Could not remove ${name}: ${e.message || e}`);
+  }
+}
+
 function init() {
   populateAllMfrs();
   populateMountThick();
+  populateOperatorDropdowns();
   updateConfigBanner();
   loadInventoryFromSheet();
 }
