@@ -684,7 +684,7 @@
 
     <div class="setup-card">
       <h3>About this tool</h3>
-      <p>Polyflex Offcut Optimizer — version 1.0<br>
+      <p>Polyflex Offcut Optimizer — version 2.1<br>
       Designed for semi-skilled operators to manage plate offcut stock without direct spreadsheet access.<br><br>
       All searches and stock additions are automatically synced to Google Sheets in real time.</p>
     </div>
@@ -846,6 +846,10 @@
    CONFIG
 ═══════════════════════════════════════════════════ */
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx36x2daA6OA4OZo5Gwn9ZylVmn6GvpqYR3CFTQY_E7Y_2_gZj5cnWEzfEUhzgBb7ID/exec';
+
+const PLATE_OPERATORS = ['Lonwabo','Zing','Siya','Tashreeq','Imraan'];
+const MOUNT_OPERATORS = ['Calvin','Themba','Andisa','Sean','Nizaam'];
+let activeSearchId = '';
 
 function updateConfigBanner() {
   document.getElementById('config-banner').style.display = 'none';
@@ -1092,6 +1096,25 @@ function showTab(name) {
 
 }
 
+function createSearchId() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `S-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${Math.floor(Math.random()*900+100)}`;
+}
+
+function requestOperator(promptText, allowed) {
+  const answer = window.prompt(`${promptText}
+
+Choose one of: ${allowed.join(', ')}`);
+  if (answer === null) return null;
+  const match = allowed.find(n => n.toLowerCase() === answer.trim().toLowerCase());
+  if (!match) {
+    alert('Please enter a valid operator name from the list.');
+    return null;
+  }
+  return match;
+}
+
 /* ═══════════════════════════════════════════════════
    SEARCH
 ═══════════════════════════════════════════════════ */
@@ -1108,6 +1131,7 @@ function doSearch() {
   if (!mfr || !type || !thick) { showMsg('search-results','error','Please select manufacturer, plate type and thickness.'); return; }
   if (!x || !y || x <= 0 || y <= 0) { showMsg('search-results','error','Please enter valid X and Y sizes greater than zero.'); return; }
 
+  activeSearchId = createSearchId();
   const needed = x * y;
   const matches = inventory
     .filter(i => i.mfr === mfr && i.type === type && i.thick === thick && i.status === 'Available' && i.x >= x && i.y >= y)
@@ -1120,6 +1144,7 @@ function doSearch() {
       <p>No offcuts found that are big enough for <strong>${x} × ${y} mm</strong></p>
       <small>${mfr} · ${type} · ${thick} mm — check inventory or add a new plate</small>
     </div>`;
+    syncSearchToSheet(operator, mfr, type, thick, x, y, [], activeSearchId);
     return;
   }
 
@@ -1155,43 +1180,40 @@ function doSearch() {
       <div class="waste-col" style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
         <div class="waste-pct" style="color:${wasteColor(item.waste)};">${item.waste.toFixed(1)}% waste</div>
         <div class="waste-bar-bg" style="width:110px;"><div class="waste-bar-fill" style="width:${Math.min(item.waste,100).toFixed(1)}%;background:${wasteFill(item.waste)};"></div></div>
-        <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;margin-top:4px;" onclick="useOffcut('${item.code}')">Use this offcut</button>
+        <button class="btn btn-primary" style="font-size:12px;padding:6px 12px;margin-top:4px;" onclick="useOffcut('${item.code}','${activeSearchId}')">Use this offcut</button>
       </div>
     </div>`;
   });
 
   el.innerHTML = html;
-  syncSearchToSheet(mfr, type, thick, x, y);
+  syncSearchToSheet(operator, mfr, type, thick, x, y, matches, activeSearchId);
 }
 
 /* ═══════════════════════════════════════════════════
    USE OFFCUT
 ═══════════════════════════════════════════════════ */
-async function useOffcut(code) {
-  if (!confirm(`Mark offcut ${code} as used? It will be removed from available stock and moved to the USED tab in Google Sheets.`)) return;
+async function useOffcut(code, searchId) {
+  const usedBy = requestOperator('Who is logging this plate offcut as used?', PLATE_OPERATORS);
+  if (!usedBy) return;
+  if (!confirm(`Mark offcut ${code} as used by ${usedBy}? It will be removed from available stock and moved to the USED tab in Google Sheets.`)) return;
 
-  const today = getToday();
-
-  // Remove from local inventory
-  inventory = inventory.filter(i => i.code !== code);
-  renderInventory();
-
-  // Show feedback in search results
-  showMsg('search-results', 'success', `Offcut <strong>${code}</strong> marked as used and removed from stock.`);
-
-  // Sync to Google Sheets
   setSyncBadge('syncing', 'Syncing...');
   try {
     const resp = await fetch(WEBAPP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'use', code, usedDate: today })
+      body: JSON.stringify({ action: 'use', code, usedBy, searchId: searchId || activeSearchId })
     });
     const data = await resp.json();
-    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    if (!data.ok) throw new Error(data.error || 'Sync failed');
+    inventory = inventory.filter(i => i.code !== code);
+    renderInventory();
+    showMsg('search-results', 'success', `Offcut <strong>${code}</strong> logged as used by <strong>${usedBy}</strong> and removed from stock.`);
+    setSyncBadge('synced', 'Sheet updated');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
   } catch(e) {
-    setSyncBadge('error', 'Offline');
+    setSyncBadge('error', 'Sync failed');
+    showMsg('search-results', 'error', `Could not mark ${code} as used: ${e.message || e}`);
   }
 }
 
@@ -1290,16 +1312,23 @@ function renderInventory() {
 /* ═══════════════════════════════════════════════════
    GOOGLE SHEETS SYNC
 ═══════════════════════════════════════════════════ */
-async function syncSearchToSheet(mfr, type, thick, x, y) {
-  setSyncBadge('syncing', 'Syncing...');
+async function syncSearchToSheet(operator, mfr, type, thick, x, y, matches, searchId) {
+  setSyncBadge('syncing', 'Logging search...');
+  const best = matches && matches.length ? matches[0] : null;
   try {
     const resp = await fetch(WEBAPP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action:'jobinput', mfr, type, thick, x, y })
+      body: JSON.stringify({
+        action:'jobsearch', searchId, operator, mfr, type, thick, x, y,
+        matchesFound: matches ? matches.length : 0,
+        bestCode: best ? best.code : '',
+        bestArea: best ? best.area : '',
+        bestWastePct: best ? Number(best.waste.toFixed(2)) : ''
+      })
     });
     const data = await resp.json();
-    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Search logged' : 'Log failed');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
   } catch(e) {
     setSyncBadge('error', 'Offline');
@@ -1578,25 +1607,27 @@ function doMountSearch() {
 async function useMountOffcut(uid) {
   const item = mountingInventory.find(i => i._uid === uid);
   if (!item) return;
-  if (!confirm(`Mark this ${item.thick} thou offcut (${item.x} × ${item.y} cm) as used? It will be removed from available stock and moved to the MOUNTING USED tab in Google Sheets.`)) return;
-
-  mountingInventory = mountingInventory.filter(i => i._uid !== uid);
-  renderMountInventory();
-
-  showMsg('mount-search-results', 'success', `Offcut marked as used and removed from stock.`);
+  const usedBy = requestOperator('Who is logging this mounting-board offcut as used?', MOUNT_OPERATORS);
+  if (!usedBy) return;
+  if (!confirm(`Mark this ${item.thick} thou offcut (${item.x} × ${item.y} cm) as used by ${usedBy}?`)) return;
 
   setSyncBadge('syncing', 'Syncing...');
   try {
     const resp = await fetch(WEBAPP_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: 'mountUse', date: item.date, by: item.by, mfr: item.mfr, thick: item.thick, x: item.x, y: item.y })
+      body: JSON.stringify({ action: 'mountUse', date: item.date, by: item.by, mfr: item.mfr, thick: item.thick, x: item.x, y: item.y, usedBy })
     });
     const data = await resp.json();
-    setSyncBadge(data.ok ? 'synced' : 'error', data.ok ? 'Sheet updated' : 'Sync failed');
+    if (!data.ok) throw new Error(data.error || 'Sync failed');
+    mountingInventory = mountingInventory.filter(i => i._uid !== uid);
+    renderMountInventory();
+    showMsg('mount-search-results', 'success', `Offcut logged as used by <strong>${usedBy}</strong> and removed from stock.`);
+    setSyncBadge('synced', 'Sheet updated');
     setTimeout(() => setSyncBadge('', 'Connected'), 3000);
   } catch(e) {
-    setSyncBadge('error', 'Offline');
+    setSyncBadge('error', 'Sync failed');
+    showMsg('mount-search-results', 'error', `Could not mark the offcut as used: ${e.message || e}`);
   }
 }
 
